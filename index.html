@@ -79,13 +79,13 @@ footer{text-align:center;font-size:11px;color:var(--mut);padding:18px 12px 26px}
     <canvas id="cv3"></canvas>
     <div id="dims"></div>
     <div id="warn" class="warn"></div>
-    <p class="hint">نقطه‌ها را با انگشت جابه‌جا کن. ■ گوشه، ● وسط قوس.</p>
+    <p class="hint">نقطه‌ها را با انگشت جابه‌جا کن. ■ گوشه، ● وسط قوس. خط آبی جای دیوار و سقف است؛ اگر مقطع برعکس افتاده، با «چرخش» یا «قرینه» درستش کن.</p>
     <label>ارتفاع واقعی مقطع (سانتی‌متر)<input id="hcm" type="number" value="12" min="0.5" step="0.5"></label>
     <label>حساسیت خط<input id="sens" type="range" min="4" max="40" value="14"></label>
     <label>بستن شکاف‌ها<input id="gap" type="range" min="0" max="8" value="2"></label>
     <label>صاف‌سازی<input id="eps" type="range" min="1" max="14" value="4"></label>
-    <label>صاف کردن خطوط افقی و عمودی<input id="snap" type="checkbox" checked></label>
-    <label>دیوار سمت راست مقطع است<input id="flip" type="checkbox"></label>
+    <label>زاویه‌های دقیق (۹۰°، ۴۵° و قوس ۹۰°)<input id="snap" type="checkbox" checked></label>
+    <div class="row" style="margin:6px 0"><button id="rot">⟳ چرخش ۹۰°</button><button id="mir">⇋ قرینه</button></div>
     <div class="row"><button id="redo">تشخیص دوباره</button><button id="toS4" class="pri">ساخت سه‌بعدی</button></div>
   </div>
 </section>
@@ -213,9 +213,13 @@ function warp(){const[tl,tr,br,bl]=corners,d=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[
   const h=solve(A,b),out=new Uint8Array(W*H);
   for(let y=0;y<H;y++)for(let x=0;x<W;x++){const w=h[6]*x+h[7]*y+1,u=(h[0]*x+h[1]*y+h[2])/w,v=(h[3]*x+h[4]*y+h[5])/w;
     out[y*W+x]=srcGray[Math.min(SH-1,Math.max(0,v|0))*SW+Math.min(SW-1,Math.max(0,u|0))]}
-  warped=out;WW=W;WH=H;
-  bgCanvas=document.createElement('canvas');bgCanvas.width=W;bgCanvas.height=H;const bx=bgCanvas.getContext('2d'),id=bx.createImageData(W,H);
-  for(let i=0;i<W*H;i++){id.data[i*4]=id.data[i*4+1]=id.data[i*4+2]=out[i];id.data[i*4+3]=255}bx.putImageData(id,0,0)}
+  warped=out;WW=W;WH=H;makeBg()}
+function makeBg(){const W=WW,H=WH;bgCanvas=document.createElement('canvas');bgCanvas.width=W;bgCanvas.height=H;const bx=bgCanvas.getContext('2d'),id=bx.createImageData(W,H);
+  for(let i=0;i<W*H;i++){id.data[i*4]=id.data[i*4+1]=id.data[i*4+2]=warped[i];id.data[i*4+3]=255}bx.putImageData(id,0,0)}
+function xform(rot){const W=WW,H=WH,n=new Uint8Array(W*H);
+  if(rot){for(let y=0;y<H;y++)for(let x=0;x<W;x++)n[x*H+(H-1-y)]=warped[y*W+x];WW=H;WH=W;if(shape)for(const v of shape.V){const t=v.x;v.x=H-v.y;v.y=t}}
+  else{for(let y=0;y<H;y++)for(let x=0;x<W;x++)n[y*W+(W-1-x)]=warped[y*W+x];if(shape)for(const v of shape.V)v.x=W-v.x}
+  warped=n;makeBg();drawShape()}
 
 $('toS3').onclick=()=>{warp();detect();enable(3);go(3)};
 
@@ -297,9 +301,18 @@ function beautify(P){const n=P.length,eps=+$('eps').value;
     else{E.push({t:'L',a:va});k++}}
   E.forEach((e,i)=>e.b=E[(i+1)%E.length].a);return{V,E}}
 
-function snap(sh){const tol=Math.tan(10*Math.PI/180);
-  for(let it=0;it<2;it++)for(const e of sh.E){if(e.t!=='L')continue;const a=sh.V[e.a],b=sh.V[e.b],dx=b.x-a.x,dy=b.y-a.y;
-    if(Math.abs(dy)<=Math.abs(dx)*tol){a.y=b.y=(a.y+b.y)/2}else if(Math.abs(dx)<=Math.abs(dy)*tol){a.x=b.x=(a.x+b.x)/2}}}
+function snap(sh){const D=Math.PI/180,hv=Math.tan(15*D);
+  // classify once: lines H / V / 45°, arcs ~90° → quarter arcs
+  for(const e of sh.E){const a=sh.V[e.a],b=sh.V[e.b],dx=b.x-a.x,dy=b.y-a.y;e.k=null;
+    if(e.t==='L'){if(Math.abs(dy)<=Math.abs(dx)*hv)e.k='H';else if(Math.abs(dx)<=Math.abs(dy)*hv)e.k='V';
+      else{const ang=Math.atan2(Math.abs(dy),Math.abs(dx))/D;if(Math.abs(ang-45)<=12)e.k='D'}}
+    else{const m=sh.V[e.m],c=circ3(a,m,b);if(!c)continue;let sw=Math.abs(Math.atan2(a.y-c[1],a.x-c[0])-Math.atan2(b.y-c[1],b.x-c[0]))/D;if(sw>180)sw=360-sw;
+      if(sw>60&&sw<120&&Math.abs(dx)>1&&Math.abs(dy)>1){const c1=[a.x,b.y],c2=[b.x,a.y];e.k=Math.hypot(c1[0]-c[0],c1[1]-c[1])<Math.hypot(c2[0]-c[0],c2[1]-c[1])?'Q1':'Q2'}}}
+  for(let it=0;it<8;it++)for(const e of sh.E){if(!e.k)continue;const a=sh.V[e.a],b=sh.V[e.b];
+    if(e.k==='H')a.y=b.y=(a.y+b.y)/2;else if(e.k==='V')a.x=b.x=(a.x+b.x)/2;
+    else if(e.k==='D'){const dx=b.x-a.x,dy=b.y-a.y,d=(Math.abs(dx)+Math.abs(dy))/2,mx=(a.x+b.x)/2,my=(a.y+b.y)/2,tx=Math.sign(dx)*d/2,ty=Math.sign(dy)*d/2;a.x=mx-tx;a.y=my-ty;b.x=mx+tx;b.y=my+ty}
+    else{const dx=b.x-a.x,dy=b.y-a.y,r=(Math.abs(dx)+Math.abs(dy))/2,ex=(Math.sign(dx)*r-dx)/2,ey=(Math.sign(dy)*r-dy)/2;a.x-=ex;a.y-=ey;b.x+=ex;b.y+=ey;
+      const c=e.k==='Q1'?[a.x,b.y]:[b.x,a.y],m=sh.V[e.m],ux=(a.x+b.x)/2-c[0],uy=(a.y+b.y)/2-c[1],l=Math.hypot(ux,uy)||1;m.x=c[0]+ux/l*r;m.y=c[1]+uy/l*r}}}
 
 function circ3(a,m,b){const d=2*(a.x*(m.y-b.y)+m.x*(b.y-a.y)+b.x*(a.y-m.y));if(Math.abs(d)<1e-6)return null;
   const a2=a.x*a.x+a.y*a.y,m2=m.x*m.x+m.y*m.y,b2=b.x*b.x+b.y*b.y;
@@ -317,7 +330,10 @@ function samplePoly(){const o=[];for(const e of shape.E){const a=shape.V[e.a];
 const cv3=$('cv3');
 function drawShape(){if(!bgCanvas)return;cv3.width=WW;cv3.height=WH;const x=cv3.getContext('2d'),s=scl(cv3);
   x.globalAlpha=.4;x.drawImage(bgCanvas,0,0);x.globalAlpha=1;if(!shape){$('dims').textContent='';return}
-  const P=samplePoly();x.beginPath();P.forEach((p,i)=>i?x.lineTo(...p):x.moveTo(...p));x.closePath();
+  const P=samplePoly();let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const[a,b]of P){x0=Math.min(x0,a);x1=Math.max(x1,a);y0=Math.min(y0,b);y1=Math.max(y1,b)}
+  x.lineWidth=5*s;x.strokeStyle='#3b6fb5';x.beginPath();x.moveTo(x0-4*s,y1+20*s);x.lineTo(x0-4*s,y0-4*s);x.lineTo(x1+20*s,y0-4*s);x.stroke();
+  x.fillStyle='#3b6fb5';x.font=`${13*s}px Tahoma`;x.textAlign='center';x.fillText('دیوار',x0-14*s,y1+34*s);x.fillText('سقف',x1+8*s,y0-12*s);
+  x.beginPath();P.forEach((p,i)=>i?x.lineTo(...p):x.moveTo(...p));x.closePath();
   x.fillStyle='rgba(181,101,43,.16)';x.fill();x.lineWidth=2.2*s;x.strokeStyle='#b5652b';x.lineJoin='round';x.stroke();
   for(const v of shape.V){x.beginPath();if(v.mid)x.arc(v.x,v.y,6*s,0,7);else x.rect(v.x-6*s,v.y-6*s,12*s,12*s);
     x.fillStyle=v.mid?'#fff':'#1f1d1a';x.fill();x.lineWidth=2*s;x.strokeStyle='#1f1d1a';x.stroke()}
@@ -325,14 +341,14 @@ function drawShape(){if(!bgCanvas)return;cv3.width=WW;cv3.height=WH;const x=cv3.
 drag(cv3,()=>shape?shape.V.map(v=>[v.x,v.y]):[],(i,p)=>{shape.V[i].x=p[0];shape.V[i].y=p[1];drawShape()});
 let tmr;const redet=()=>{clearTimeout(tmr);tmr=setTimeout(detect,180)};
 ['sens','gap','eps','snap'].forEach(id=>$(id).oninput=redet);
-$('flip').oninput=$('hcm').oninput=()=>drawShape();
+$('hcm').oninput=()=>drawShape();$('rot').onclick=()=>xform(true);$('mir').onclick=()=>xform(false);
 $('redo').onclick=detect;
 $('toS4').onclick=()=>{if(!shape)return;enable(4);go(4)};
 const fa=(v,d=1)=>(+v).toLocaleString('fa-IR',{maximumFractionDigits:d});
 
 function profileCm(){const P=samplePoly();let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
   for(const[x,y]of P){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}
-  const h=Math.max(.1,+$('hcm').value||1),s=h/((y1-y0)||1),fl=$('flip').checked;
+  const h=Math.max(.1,+$('hcm').value||1),s=h/((y1-y0)||1),fl=false;
   let pts=P.map(([x,y])=>[(fl?x1-x:x-x0)*s,(y1-y)*s]);
   let A=0,cu=0;for(let i=0;i<pts.length;i++){const p=pts[i],q=pts[(i+1)%pts.length],c=p[0]*q[1]-q[0]*p[1];A+=c;cu+=(p[0]+q[0])*c}
   if(A<0)pts.reverse();cu=cu/(3*A);return{pts,w:(x1-x0)*s,h,area:Math.abs(A)/2,cu}}
