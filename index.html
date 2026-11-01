@@ -89,6 +89,8 @@ footer{text-align:center;font-size:11px;color:var(--mut);padding:18px 12px 26px}
     <label>صاف کردن خطوط افقی و عمودی (۹۰°)<input id="snap" type="checkbox" checked></label>
     <label>اصلاح بیشتر: ۴۵° و قوس دقیق (آزمایشی)<input id="adv" type="checkbox"></label>
     <div class="row" style="margin:6px 0"><button id="rot">⟳ چرخش ۹۰°</button><button id="mir">⇋ قرینه</button></div>
+    <div class="row" style="margin-bottom:8px"><button id="xPdf">📄 شابلون چاپی ۱:۱ (PDF — A4 / A3 خودکار)</button></div>
+    <div id="pdfTxt" class="hint" style="text-align:center"></div>
     <div class="row"><button id="redo">تشخیص دوباره</button><button id="toS4" class="pri">ساخت سه‌بعدی</button></div>
   </div>
 </section>
@@ -572,6 +574,28 @@ $('xrBtn').onclick=async()=>{const msg=t=>{$('arHint').textContent=t};
   r.setAnimationLoop((t,fr)=>{if(fr){const hr=fr.getHitTestResults(hts);if(hr.length){ret.visible=pts.length<2;ret.matrix.fromArray(hr[0].getPose(ref).transform.matrix)}else ret.visible=false}r.render(sc,cam)});
   session.addEventListener('end',()=>{r.setAnimationLoop(null);hts.cancel&&hts.cancel();r.dispose();r.domElement.remove();ov.style.display='none'})};
 function alertBox(t){const el=$('xrNote')||Object.assign(document.createElement('p'),{id:'xrNote',className:'warn'});el.textContent=t;$('xrRow').after(el)}
+
+/* ---------- 1:1 printable template (PDF) ---------- */
+function makePdf(){const pr=profileCm(),P=pr.pts.map(([u,v])=>[u*10,v*10]),W=pr.w*10,H=pr.h*10,M=12,D=14,INFO=30;
+  const nW=W+2*M+D,nH=H+2*M+D+INFO,S=[['A4',210,297],['A3',297,420],['A2',420,594],['A1',594,841],['A0',841,1189]];let pg=null;
+  for(const[n,a,b]of S){if(nW<=a&&nH<=b){pg=[n,a,b];break}if(nW<=b&&nH<=a){pg=[n,b,a];break}}if(!pg)pg=['custom',Math.ceil(nW),Math.ceil(nH)];
+  const[pn,PW,PH]=pg,k=72/25.4,f=n=>(n*k).toFixed(2),x0=M+D+Math.max(0,(PW-nW)/2),y0=M+D+INFO+Math.max(0,(PH-nH)/2);
+  const T=(x,y,sz,t)=>`BT /F1 ${sz} Tf ${f(x)} ${f(y)} Td (${t}) Tj ET\n`,Ln=(a,b,c,d)=>`${f(a)} ${f(b)} m ${f(c)} ${f(d)} l S\n`;
+  let c='1 J 1 j 0 0 0 RG 0 0 0 rg\n';
+  c+='0.4 0.4 0.4 RG 0.5 w [4 3] 0 d\n'+Ln(x0,y0-4,x0,y0+H+6)+Ln(x0-4,y0+H,x0+W+6,y0+H)+'[] 0 d 0 0 0 RG\n';
+  c+=`${(0.35*k).toFixed(2)} w\n`+P.map(([u,v],i)=>`${f(x0+u)} ${f(y0+v)} ${i?'l':'m'}`).join('\n')+' h S\n';
+  c+='0.4 w\n'+Ln(x0,y0-D+4,x0+W,y0-D+4)+Ln(x0,y0-D+2,x0,y0-D+6)+Ln(x0+W,y0-D+2,x0+W,y0-D+6)+T(x0+W/2-8,y0-D+6,8,`${W.toFixed(1)} mm`);
+  c+=Ln(x0-D+4,y0,x0-D+4,y0+H)+Ln(x0-D+2,y0,x0-D+6,y0)+Ln(x0-D+2,y0+H,x0-D+6,y0+H)+`BT /F1 8 Tf 0 1 -1 0 ${f(x0-D+3)} ${f(y0+H/2-8)} Tm (${H.toFixed(1)} mm) Tj ET\n`;
+  const bar=PW-2*M>=110?100:50,by=M+6;c+='1.2 w\n'+Ln(M,by,M+bar,by)+'0.4 w\n';for(let i=0;i<=bar;i+=10)c+=Ln(M+i,by,M+i,by+(i%50?2:4));
+  c+=T(M,by-4.5,7,`${bar} mm - check with a ruler before cutting`)+T(M,M+INFO-6,10,'Osta Ali - profile template  SCALE 1:1')+T(M,M+INFO-11,8,`Section ${W.toFixed(1)} x ${H.toFixed(1)} mm  |  Paper ${pn} ${PW}x${PH} mm  |  Print at 100% / Actual size`)+T(M,M+INFO-15.5,7,'Dashed lines = wall (left) and ceiling (top) reference.')+T(PW-M-58,M+1,6,'ArchTverse  +964 7773944470');
+  const objs=['<< /Type /Catalog /Pages 2 0 R >>','<< /Type /Pages /Kids [3 0 R] /Count 1 >>',`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${f(PW)} ${f(PH)}] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>`,
+    `<< /Length ${c.length} >>\nstream\n${c}endstream`,'<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'];
+  let out='%PDF-1.4\n';const off=[];objs.forEach((o,i)=>{off.push(out.length);out+=`${i+1} 0 obj\n${o}\nendobj\n`});
+  const xr=out.length;out+=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`+off.map(o=>String(o).padStart(10,'0')+' 00000 n \n').join('')+`trailer\n<< /Size ${objs.length+1} /Root 1 0 R >>\nstartxref\n${xr}\n%%EOF`;
+  return{pdf:out,pn}}
+$('xPdf').onclick=()=>{if(!shape)return;const{pdf,pn}=makePdf();dl('osta-ali-template-1to1.pdf',pdf,'application/pdf');
+  $('pdfTxt').textContent=`کاغذ ${pn==='custom'?'سفارشی':pn} — موقع چاپ «Actual size / ۱۰۰٪» را بزن و خط‌کش ۱۰ سانتی پایین برگه را با خط‌کش واقعی چک کن.`};
+window.__pdf=makePdf;
 
 /* ---------- exports ---------- */
 let dlr=null;try{window.claude?.use('downloads').then(d=>dlr=d).catch(()=>{})}catch(e){}
