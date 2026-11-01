@@ -129,6 +129,11 @@ footer{text-align:center;font-size:11px;color:var(--mut);padding:18px 12px 26px}
 
 <div id="arBox" style="display:none;position:fixed;inset:0;z-index:20;background:#1f1d1a;flex-direction:column">
   <model-viewer id="mv" ar ar-modes="webxr scene-viewer quick-look" ar-scale="fixed" camera-controls shadow-intensity="1" exposure="1.1" style="flex:1;width:100%;background:#e9e5de">
+    <div id="arCtl" onbeforexrselect="event.preventDefault()" style="position:absolute;left:10px;right:10px;top:10px;background:rgba(255,255,255,.92);border-radius:12px;padding:4px 12px;font-size:12px">
+      <label id="arLL"><span id="arLt">طول</span> <b id="arLv"></b><input id="arL" type="range" min="20" max="600" step="5"></label>
+      <label id="arHL">ارتفاع قاب <b id="arHv"></b><input id="arH" type="range" min="20" max="300" step="5"></label>
+      <label>اندازهٔ مقطع <b id="arKv"></b><input id="arK" type="range" min="40" max="200" step="5" value="100"></label>
+    </div>
     <button slot="ar-button" class="pri" style="position:absolute;bottom:18px;left:50%;transform:translateX(-50%);padding:14px 22px">📱 قرار دادن در فضای واقعی</button>
   </model-viewer>
   <p id="arHint" class="hint" style="color:#ddd;padding:8px 14px;margin:0"></p>
@@ -495,17 +500,33 @@ $('apos').onchange=()=>{syncUI();update3d()};
 const EXT='';
 if(window.top!==window&&!location.host.includes('netlify')){$('extBox').style.display='block';if(EXT){$('extLink').href=EXT;$('extLink').textContent=EXT}else $('extLink').textContent='(نسخهٔ مستقل به‌زودی)';document.body.insertBefore($('extBox'),$('s1'))}
 $('arClose').onclick=()=>{$('arBox').style.display='none'};
+let arP=null,GLTFE=null,arT=null;
+function arGeo(){const pr=profileCm(),k=arP.k/100;let prof=pr.pts.map(([u,v])=>[u*k,v*k]);
+  if(mode==='F'&&$('inv').checked)prof=prof.map(([u,v])=>[v,u]).reverse();
+  const L=arP.L,H=arP.H;let path,closed=false;
+  if(mode==='S')path=[[0,0],[L,0]];else if(mode==='C')path=$('inv').checked?[[0,L],[0,0],[L,0]]:[[L,0],[0,0],[0,L]];
+  else if(mode==='F'){path=[[0,0],[0,H],[L,H],[L,0]];closed=true}else({path,closed}=buildPath());
+  return{g:sweep(prof,path,closed).g,w:pr.w*k,h:pr.h*k}}
+function arLabels(){const pr=profileCm(),k=arP.k/100;$('arLv').textContent=fa(arP.L,0)+' cm';$('arHv').textContent=fa(arP.H,0)+' cm';
+  $('arKv').textContent=`${fa(arP.k,0)}٪ — ${fa(pr.w*k)}×${fa(pr.h*k)} cm`}
+async function arBuild(){const{g}=arGeo(),mt=mesh.material,sc=new THREE.Scene(),hold=new THREE.Group(),
+    m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:mt.color,metalness:mt.metalness,roughness:mt.roughness,side:THREE.DoubleSide}));
+  if(mode==='F')m.rotation.x=Math.PI/2;if(mode==='S')hold.rotation.y=Math.PI;
+  hold.add(m);hold.scale.setScalar(.01);sc.add(hold);sc.updateMatrixWorld(true);
+  const c=new THREE.Box3().setFromObject(hold).getCenter(new THREE.Vector3());hold.position.sub(c);
+  const glb=await new Promise((res,rej)=>new GLTFE().parse(sc,res,rej,{binary:true}));g.dispose();
+  const mv=$('mv'),old=mv.src;mv.src=URL.createObjectURL(new Blob([glb],{type:'model/gltf-binary'}));if(old)setTimeout(()=>URL.revokeObjectURL(old),4000)}
+['arL','arH','arK'].forEach(id=>{const key={arL:'L',arH:'H',arK:'k'}[id];
+  $(id).oninput=()=>{arP[key]=+$(id).value;arLabels();clearTimeout(arT);arT=setTimeout(()=>arBuild().catch(e=>$('arHint').textContent='خطا: '+e.message),350)}});
 $('arBtn').onclick=async()=>{if(!mesh)return;const b=$('arBtn');b.disabled=true;b.textContent='در حال آماده‌سازی…';
-  try{const[{GLTFExporter}]=await Promise.all([import('./GLTFExporter.js'),import('./model-viewer.min.js')]);
-    const sc=new THREE.Scene(),hold=new THREE.Group(),m=new THREE.Mesh(mesh.geometry,new THREE.MeshStandardMaterial({color:mesh.material.color,metalness:mesh.material.metalness,roughness:mesh.material.roughness,side:THREE.DoubleSide}));
-    if(mode==='F')m.rotation.x=Math.PI/2;if(mode==='S')hold.rotation.y=Math.PI;
-    hold.add(m);hold.scale.setScalar(.01);sc.add(hold);sc.updateMatrixWorld(true);
-    const c=new THREE.Box3().setFromObject(hold).getCenter(new THREE.Vector3());hold.position.sub(c);
-    const glb=await new Promise((res,rej)=>new GLTFExporter().parse(sc,res,rej,{binary:true}));
-    const mv=$('mv'),wall=mode==='S'||mode==='F';mv.setAttribute('ar-placement',wall?'wall':'floor');
-    if(mv.src)URL.revokeObjectURL(mv.src);mv.src=URL.createObjectURL(new Blob([glb],{type:'model/gltf-binary'}));
+  try{const[{GLTFExporter}]=await Promise.all([import('./GLTFExporter.js'),import('./model-viewer.min.js')]);GLTFE=GLTFExporter;
+    arP={L:Math.min(600,+$('len').value||120),H:Math.min(300,+$('fh').value||90),k:100};
+    $('arL').value=arP.L;$('arH').value=arP.H;$('arK').value=100;
+    $('arLL').style.display=mode==='A'?'none':'flex';$('arHL').style.display=mode==='F'?'flex':'none';
+    $('arLt').textContent=mode==='F'?'عرض قاب':mode==='C'?'طول هر شاخه':'طول';arLabels();
+    await arBuild();const mv=$('mv'),wall=mode==='S'||mode==='F';mv.setAttribute('ar-placement',wall?'wall':'floor');
     $('arBox').style.display='flex';
-    $('arHint').textContent=(wall?'گوشی را رو به دیوار بگیر و آرام حرکت بده تا دیوار شناسایی شود. ':'گوشی را رو به کف بگیر و آرام حرکت بده تا سطح شناسایی شود. ')+'اندازه ۱:۱ واقعی است.';
+    $('arHint').textContent=(wall?'گوشی را رو به دیوار بگیر و آرام حرکت بده تا دیوار شناسایی شود. ':'گوشی را رو به کف بگیر و آرام حرکت بده تا سطح شناسایی شود. ')+'اندازه‌ها واقعی (۱:۱) است؛ طول و مقطع را با اسلایدرهای بالا جدا تنظیم کن.';
     mv.addEventListener('load',()=>{if(!mv.canActivateAR)$('arHint').textContent='AR در این مرورگر فعال نیست. در Chrome اندروید یا Safari آیفون باز کن. (داخل اپ Claude کار نمی‌کند.)'},{once:true})
   }catch(e){$('arHint').textContent='خطا: '+e.message;$('arBox').style.display='flex'}
   b.disabled=false;b.textContent='📱 AR — دیدن در فضای واقعی'};
