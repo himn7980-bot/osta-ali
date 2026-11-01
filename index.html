@@ -122,6 +122,7 @@ footer{text-align:center;font-size:11px;color:var(--mut);padding:18px 12px 26px}
   <div class="card">
     <p class="hint" style="margin-top:0">خروجی شابلون در مقیاس ۱:۱ است؛ موقع چاپ مقیاس را روی ۱۰۰٪ (Actual size) بگذار.</p>
     <div class="row" style="margin-bottom:8px"><button id="arBtn" class="pri">📱 AR — دیدن در فضای واقعی</button></div>
+    <div class="row" id="xrRow" style="margin-bottom:8px"><button id="xrBtn">🎯 AR دقیق: نقطه‌ها را روی دیوار بزن (اندروید)</button></div>
     <div class="row"><button id="xSvg">شابلون SVG</button><button id="xDxf">شابلون DXF</button></div>
     <div class="row" style="margin-top:8px"><button id="xStl">مدل STL</button><button id="xPng">تصویر PNG</button></div>
   </div>
@@ -138,6 +139,11 @@ footer{text-align:center;font-size:11px;color:var(--mut);padding:18px 12px 26px}
   </model-viewer>
   <p id="arHint" class="hint" style="color:#ddd;padding:8px 14px;margin:0"></p>
   <div class="row" style="padding:0 12px 14px"><button id="arClose">بستن</button></div>
+</div>
+<div id="xrOv" style="display:none;position:fixed;inset:0;pointer-events:none">
+  <div id="xrMsg" style="margin:14px;padding:10px 12px;background:rgba(0,0,0,.68);color:#fff;border-radius:12px;font-size:14px;line-height:1.8;text-align:center"></div>
+  <div class="row" onbeforexrselect="event.preventDefault()" style="position:absolute;bottom:18px;left:10px;right:10px;pointer-events:auto">
+    <button id="xrUndo">↶ برگشت</button><button id="xrEdge">⇅ لبه</button><button id="xrFlip">↕ برعکس</button><button id="xrExit" class="pri">خروج</button></div>
 </div>
 <div id="extBox" class="card" style="display:none;margin:0 12px 10px;border-color:#b5652b"><p class="hint" style="margin:0">داخل اپ Claude دوربین، گالری و AR مسدود است. برای کار کامل، اپ را در مرورگر گوشی باز کن:<br><a id="extLink" href="#" style="color:#b5652b;font-weight:600" dir="ltr"></a></p></div>
 <footer>ساخته‌شده توسط ArchTverse — واتساپ / تماس: <span dir="ltr">07773944470</span></footer>
@@ -489,7 +495,7 @@ async function update3d(){if(!shape)return;await libs;if(!THREE){$('sDim').textC
 function setMode(m){mode=m;['S','C','A','F'].forEach(k=>$('m'+k).classList.toggle('on',k===m));syncUI();update3d()}
 function syncUI(){const m=mode,mid=isMid();
   $('lLen').hidden=m==='A';$('lRad').hidden=$('lAng').hidden=$('lPos').hidden=m!=='A';$('lFh').hidden=m!=='F';
-  $('lInv').hidden=m==='S'||mid;$('lCeil').hidden=$('lLight').hidden=$('lGap').hidden=m==='F';
+  $('lInv').hidden=m==='S'||mid;$('xrRow').style.display=(m==='S'||m==='F')?'flex':'none';$('lCeil').hidden=$('lLight').hidden=$('lGap').hidden=m==='F';
   $('lenTxt').textContent=m==='F'?'عرض قاب (سانتی‌متر)':'طول هر شاخه (سانتی‌متر)';
   $('invTxt').textContent={C:'گوشهٔ بیرونی (دور ستون)',A:'ابزار بیرون قوس (دور ستون گرد)',F:'چرخاندن مقطع ۹۰°'}[m]||''}
 $('mS').onclick=()=>setMode('S');$('mC').onclick=()=>setMode('C');$('mA').onclick=()=>setMode('A');$('mF').onclick=()=>setMode('F');
@@ -530,6 +536,42 @@ $('arBtn').onclick=async()=>{if(!mesh)return;const b=$('arBtn');b.disabled=true;
     mv.addEventListener('load',()=>{if(!mv.canActivateAR)$('arHint').textContent='AR در این مرورگر فعال نیست. در Chrome اندروید یا Safari آیفون باز کن. (داخل اپ Claude کار نمی‌کند.)'},{once:true})
   }catch(e){$('arHint').textContent='خطا: '+e.message;$('arBox').style.display='flex'}
   b.disabled=false;b.textContent='📱 AR — دیدن در فضای واقعی'};
+
+/* ---------- precise AR (WebXR hit-test) ---------- */
+$('xrBtn').onclick=async()=>{const msg=t=>{$('arHint').textContent=t};
+  if(!navigator.xr||!(await navigator.xr.isSessionSupported('immersive-ar').catch(()=>false))){alertBox('AR دقیق فقط در Chrome اندروید (با Google Play Services for AR) کار می‌کند. در آیفون از دکمهٔ AR معمولی استفاده کن.');return}
+  await libs;const pr=profileCm(),ov=$('xrOv'),F=mode==='F';ov.style.display='block';let session;
+  try{session=await navigator.xr.requestSession('immersive-ar',{requiredFeatures:['hit-test'],optionalFeatures:['dom-overlay'],domOverlay:{root:ov}})}
+  catch(e){ov.style.display='none';alertBox('شروع AR ممکن نشد: '+e.message);return}
+  const r=new THREE.WebGLRenderer({antialias:true,alpha:true});r.setPixelRatio(devicePixelRatio);r.xr.enabled=true;r.xr.setReferenceSpaceType('local');
+  r.domElement.style.display='none';document.body.appendChild(r.domElement);await r.xr.setSession(session);
+  const sc=new THREE.Scene(),cam=new THREE.PerspectiveCamera();sc.add(new THREE.HemisphereLight(0xffffff,0x777777,2.4));const dl=new THREE.DirectionalLight(0xffffff,1.6);dl.position.set(.4,1,.6);sc.add(dl);
+  const ret=new THREE.Mesh(new THREE.RingGeometry(.025,.035,32).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xffa030}));ret.matrixAutoUpdate=false;ret.visible=false;sc.add(ret);
+  const ref=r.xr.getReferenceSpace(),vs=await session.requestReferenceSpace('viewer'),hts=await session.requestHitTestSource({space:vs});
+  const pts=[],marks=[],mt=mesh.material;let model=null,top=true,flip=false;
+  const steps=F?['گوشهٔ بالا-چپ قاب را روی دیوار بزن','گوشهٔ پایین-راست قاب را بزن']:['ابتدای لبهٔ بالای ابزار را روی دیوار بزن','انتهای لبهٔ بالای ابزار را بزن'];
+  const say=()=>{$('xrMsg').textContent=pts.length<2?`${pts.length+1}) ${steps[pts.length]} — گوشی را آرام حرکت بده تا حلقهٔ نارنجی روی دیوار بیفتد.`:'جا افتاد ✓ — «⇅ لبه»: نقطه‌ها لبهٔ بالا یا پایین ابزار باشند. «↕ برعکس»: مقطع وارونه شود.'};say();
+  function place(){if(model){sc.remove(model);model.geometry.dispose();model=null}if(pts.length<2)return;
+    const camP=new THREE.Vector3().setFromMatrixPosition(r.xr.getCamera().matrixWorld);let[A,B]=[pts[0].p,pts[1].p];
+    let N=pts[0].n.clone().add(pts[1].n);if(N.lengthSq()<1e-6)N=camP.clone().sub(A);N.normalize();if(N.dot(camP.clone().sub(A))<0)N.negate();
+    let prof=pr.pts.map(([u,v])=>[u/100,(flip?pr.h-v:v)/100]);if(flip)prof.reverse();const h=pr.h/100;let g,X,Y,O;
+    if(!F){X=B.clone().sub(A);if(X.dot(new THREE.Vector3(0,1,0).cross(N))<0){[A,B]=[B,A];X.negate()}const L=X.length();X.normalize();
+      N.sub(X.clone().multiplyScalar(N.dot(X))).normalize();Y=new THREE.Vector3().crossVectors(N,X);
+      g=sweep(prof,[[L,0],[0,0]],false).g;O=A.clone().add(Y.clone().multiplyScalar(top?-h:0))}
+    else{if($('inv').checked)prof=prof.map(([u,v])=>[v,u]).reverse();const up=new THREE.Vector3(0,1,0);N.y=0;N.normalize();Y=up;X=new THREE.Vector3().crossVectors(Y,N);
+      const d=B.clone().sub(A),dx=d.dot(X),dy=d.dot(Y),W=Math.abs(dx),H=Math.abs(dy);if(W<.05||H<.05)return;
+      O=A.clone().add(X.clone().multiplyScalar(Math.min(0,dx))).add(Y.clone().multiplyScalar(Math.max(0,dy)));
+      g=sweep(prof,[[0,0],[0,H],[W,H],[W,0]],true).g;g.rotateX(Math.PI/2)}
+    model=new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:mt.color,metalness:mt.metalness,roughness:mt.roughness,side:THREE.DoubleSide,flatShading:true}));
+    model.matrixAutoUpdate=false;model.matrix.makeBasis(X,Y,N).setPosition(O);sc.add(model)}
+  session.addEventListener('select',()=>{if(!ret.visible||pts.length>=2)return;const m=ret.matrix,p=new THREE.Vector3().setFromMatrixPosition(m),n=new THREE.Vector3().setFromMatrixColumn(m,1).normalize();
+    pts.push({p,n});const k=new THREE.Mesh(new THREE.SphereGeometry(.012,12,8),new THREE.MeshBasicMaterial({color:0x3b6fb5}));k.position.copy(p);sc.add(k);marks.push(k);place();say()});
+  document.querySelector('#xrOv .row').addEventListener('beforexrselect',e=>e.preventDefault());
+  $('xrUndo').onclick=()=>{if(!pts.length)return;pts.pop();sc.remove(marks.pop());place();say()};
+  $('xrEdge').onclick=()=>{top=!top;place()};$('xrFlip').onclick=()=>{flip=!flip;place()};$('xrExit').onclick=()=>session.end();
+  r.setAnimationLoop((t,fr)=>{if(fr){const hr=fr.getHitTestResults(hts);if(hr.length){ret.visible=pts.length<2;ret.matrix.fromArray(hr[0].getPose(ref).transform.matrix)}else ret.visible=false}r.render(sc,cam)});
+  session.addEventListener('end',()=>{r.setAnimationLoop(null);hts.cancel&&hts.cancel();r.dispose();r.domElement.remove();ov.style.display='none'})};
+function alertBox(t){const el=$('xrNote')||Object.assign(document.createElement('p'),{id:'xrNote',className:'warn'});el.textContent=t;$('xrRow').after(el)}
 
 /* ---------- exports ---------- */
 let dlr=null;try{window.claude?.use('downloads').then(d=>dlr=d).catch(()=>{})}catch(e){}
