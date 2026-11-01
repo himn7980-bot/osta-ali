@@ -273,21 +273,21 @@ function detect(){const W=WW,H=WH,g=warped,N=W*H;$('warn').textContent='';
   if(shape){const sn=$('snap').checked;if(sn)snap(shape);merge(shape);if(sn){snap(shape);merge(shape)}}
   drawShape()}
 
-function beautify(P){const n=P.length,eps=+$('eps').value*Math.max(WW,WH)/450;
+function beautify(P){const n=P.length,eps=+$('eps').value;
   const S=P.map((_,i)=>{let sx=0,sy=0;for(let k=-2;k<=2;k++){const q=P[(i+k+n)%n];sx+=q[0];sy+=q[1]}return[sx/5,sy/5]});
   let f=0,fd=0;for(let i=0;i<n;i++){const d=(S[i][0]-S[0][0])**2+(S[i][1]-S[0][1])**2;if(d>fd){fd=d;f=i}}
   const A=rdp(S.slice(0,f+1),eps),B=rdp(S.slice(f).concat([S[0]]),eps).map(i=>i+f);
   let K=A.concat(B.slice(1,-1));
   const turns=K=>K.map((_,i)=>{const q=K.length,a=S[K[(i-1+q)%q]],b=S[K[i]],c=S[K[(i+1)%q]];let d=Math.atan2(c[1]-b[1],c[0]-b[0])-Math.atan2(b[1]-a[1],b[0]-a[0]);
     while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;return d});
-  const minL=Math.max(eps*3,Math.hypot(WW,WH)*.014);for(let ch=true;ch&&K.length>3;){ch=false;const T=turns(K);
+  const minL=eps*3;for(let ch=true;ch&&K.length>3;){ch=false;const T=turns(K);
     for(let i=0;i<K.length;i++){const j=(i+1)%K.length,a=S[K[i]],b=S[K[j]];
       if(Math.hypot(a[0]-b[0],a[1]-b[1])<minL){K.splice(Math.abs(T[i])<Math.abs(T[j])?i:j,1);ch=true;break}}}
   const m=K.length;if(m<3)return null;const T=turns(K);
   let s0=0;for(let i=1;i<m;i++)if(Math.abs(T[i])>Math.abs(T[s0]))s0=i;
   K=K.slice(s0).concat(K.slice(0,s0));const T2=T.slice(s0).concat(T.slice(0,s0));
   const seg=(i,j)=>{const a=K[i],b=K[j%m],out=[];let k=a;while(out.length<=n){out.push(S[k]);if(k===b&&out.length>1)break;k=(k+1)%n}return out};
-  const V=[],E=[],tol=Math.max(3,eps*.7);let k=0;
+  const V=[],E=[],tol=Math.max(2.5,eps*1.4);let k=0;
   while(k<m){let best=-1,bp=null;
     for(let j=k+2;j<=m&&j-k<=60;j++){if(k===0&&j===m)break;
       let ok=true;for(let i=k+1;i<j;i++){const t=T2[i];if(Math.abs(t)>.9||Math.sign(t)!==Math.sign(T2[k+1])){ok=false;break}}if(!ok)break;
@@ -301,7 +301,7 @@ function beautify(P){const n=P.length,eps=+$('eps').value*Math.max(WW,WH)/450;
     else{E.push({t:'L',a:va});k++}}
   E.forEach((e,i)=>e.b=E[(i+1)%E.length].a);return{V,E}}
 
-function merge(sh){const E=sh.E,V=sh.V,minL=Math.hypot(WW,WH)*.014,ang=e=>Math.atan2(V[e.b].y-V[e.a].y,V[e.b].x-V[e.a].x);
+function merge(sh){const E=sh.E,V=sh.V,minL=Math.hypot(WW,WH)*.006,ang=e=>Math.atan2(V[e.b].y-V[e.a].y,V[e.b].x-V[e.a].x);
   for(let ch=true;ch&&E.length>3;){ch=false;
     for(let i=0;i<E.length;i++){const e=E[i],j=(i+1)%E.length,f=E[j];if(e.t!=='L')continue;
       const a=V[e.a],b=V[e.b];if(Math.hypot(b.x-a.x,b.y-a.y)<minL){a.x=(a.x+b.x)/2;a.y=(a.y+b.y)/2;E.splice(i,1);const k=i%E.length,p=(k-1+E.length)%E.length;E[k].a=e.a;E[p].b=e.a;ch=true;break}
