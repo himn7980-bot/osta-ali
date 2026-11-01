@@ -136,6 +136,9 @@ footer{text-align:center;font-size:11px;color:var(--mut);padding:18px 12px 26px}
       <label id="arLL"><span id="arLt">طول</span> <b id="arLv"></b><input id="arL" type="range" min="20" max="600" step="5"></label>
       <label id="arHL">ارتفاع قاب <b id="arHv"></b><input id="arH" type="range" min="20" max="300" step="5"></label>
       <label>اندازهٔ مقطع <b id="arKv"></b><input id="arK" type="range" min="40" max="200" step="5" value="100"></label>
+      <label>چرخش افقی <b id="oYv">0°</b><input id="oY" type="range" min="-180" max="180" step="5" value="0"></label>
+      <label>چرخش عمودی <b id="oPv">0°</b><input id="oP" type="range" min="-180" max="180" step="5" value="0"></label>
+      <label>چرخش در صفحه <b id="oRv">0°</b><input id="oR" type="range" min="-180" max="180" step="5" value="0"></label>
     </div>
     <button slot="ar-button" class="pri" style="position:absolute;bottom:18px;left:50%;transform:translateX(-50%);padding:14px 22px">📱 قرار دادن در فضای واقعی</button>
   </model-viewer>
@@ -524,12 +527,14 @@ async function arBuild(){const{g}=arGeo(),mt=mesh.material,sc=new THREE.Scene(),
   const c=new THREE.Box3().setFromObject(hold).getCenter(new THREE.Vector3());hold.position.sub(c);
   const glb=await new Promise((res,rej)=>new GLTFE().parse(sc,res,rej,{binary:true}));g.dispose();
   const mv=$('mv'),old=mv.src;mv.src=URL.createObjectURL(new Blob([glb],{type:'model/gltf-binary'}));if(old)setTimeout(()=>URL.revokeObjectURL(old),4000)}
+const orient=()=>{const y=$('oY').value,p=$('oP').value,r=$('oR').value;$('oYv').textContent=y+'°';$('oPv').textContent=p+'°';$('oRv').textContent=r+'°';$('mv').setAttribute('orientation',`${r}deg ${p}deg ${y}deg`)};
+['oY','oP','oR'].forEach(id=>$(id).oninput=orient);
 ['arL','arH','arK'].forEach(id=>{const key={arL:'L',arH:'H',arK:'k'}[id];
   $(id).oninput=()=>{arP[key]=+$(id).value;arLabels();clearTimeout(arT);arT=setTimeout(()=>arBuild().catch(e=>$('arHint').textContent='خطا: '+e.message),350)}});
 $('arBtn').onclick=async()=>{if(!mesh)return;const b=$('arBtn');b.disabled=true;b.textContent='در حال آماده‌سازی…';
   try{const[{GLTFExporter}]=await Promise.all([import('./GLTFExporter.js'),import('./model-viewer.min.js')]);GLTFE=GLTFExporter;
     arP={L:Math.min(600,+$('len').value||120),H:Math.min(300,+$('fh').value||90),k:100};
-    $('arL').value=arP.L;$('arH').value=arP.H;$('arK').value=100;
+    ['oY','oP','oR'].forEach(id=>$(id).value=0);orient();$('arL').value=arP.L;$('arH').value=arP.H;$('arK').value=100;
     $('arLL').style.display=mode==='A'?'none':'flex';$('arHL').style.display=mode==='F'?'flex':'none';
     $('arLt').textContent=mode==='F'?'عرض قاب':mode==='C'?'طول هر شاخه':'طول';arLabels();
     await arBuild();const mv=$('mv'),wall=mode==='S'||mode==='F';mv.setAttribute('ar-placement',wall?'wall':'floor');
@@ -549,13 +554,13 @@ $('xrBtn').onclick=async()=>{const msg=t=>{$('arHint').textContent=t};
   r.domElement.style.display='none';document.body.appendChild(r.domElement);await r.xr.setSession(session);
   const sc=new THREE.Scene(),cam=new THREE.PerspectiveCamera();sc.add(new THREE.HemisphereLight(0xffffff,0x777777,2.4));const dl=new THREE.DirectionalLight(0xffffff,1.6);dl.position.set(.4,1,.6);sc.add(dl);
   const ret=new THREE.Mesh(new THREE.RingGeometry(.025,.035,32).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xffa030}));ret.matrixAutoUpdate=false;ret.visible=false;sc.add(ret);
-  const ref=r.xr.getReferenceSpace(),vs=await session.requestReferenceSpace('viewer'),hts=await session.requestHitTestSource({space:vs});
+  const ref=r.xr.getReferenceSpace(),vs=await session.requestReferenceSpace('viewer'),hts=await session.requestHitTestSource({space:vs,entityTypes:['plane','point']}).catch(()=>session.requestHitTestSource({space:vs}));let seen=0,lastHit=0;
   const pts=[],marks=[],mt=mesh.material;let model=null,top=true,flip=false;
   const steps=F?['گوشهٔ بالا-چپ قاب را روی دیوار بزن','گوشهٔ پایین-راست قاب را بزن']:['ابتدای لبهٔ بالای ابزار را روی دیوار بزن','انتهای لبهٔ بالای ابزار را بزن'];
-  const say=()=>{$('xrMsg').textContent=pts.length<2?`${pts.length+1}) ${steps[pts.length]} — گوشی را آرام حرکت بده تا حلقهٔ نارنجی روی دیوار بیفتد.`:'جا افتاد ✓ — «⇅ لبه»: نقطه‌ها لبهٔ بالا یا پایین ابزار باشند. «↕ برعکس»: مقطع وارونه شود.'};say();
+  const say=(x)=>{$('xrMsg').textContent=x||(pts.length<2?`${pts.length+1}) ${steps[pts.length]}. `+(ret.visible?'حلقه روی سطح است — حالا روی صفحه بزن.':'حلقهٔ نارنجی هنوز پیدا نشده: یک قدم عقب برو و گوشی را آرام چپ و راست حرکت بده تا دیوار شناسایی شود.'):'جا افتاد ✓ — «⇅ لبه»: نقطه‌ها لبهٔ بالا یا پایین ابزار باشند. «↕ برعکس»: مقطع وارونه شود.')};say();
   function place(){if(model){sc.remove(model);model.geometry.dispose();model=null}if(pts.length<2)return;
     const camP=new THREE.Vector3().setFromMatrixPosition(r.xr.getCamera().matrixWorld);let[A,B]=[pts[0].p,pts[1].p];
-    let N=pts[0].n.clone().add(pts[1].n);if(N.lengthSq()<1e-6)N=camP.clone().sub(A);N.normalize();if(N.dot(camP.clone().sub(A))<0)N.negate();
+    let N=camP.clone().sub(A.clone().add(B).multiplyScalar(.5));N.y=0;if(N.lengthSq()<1e-6)N.set(0,0,1);N.normalize();
     let prof=pr.pts.map(([u,v])=>[u/100,(flip?pr.h-v:v)/100]);if(flip)prof.reverse();const h=pr.h/100;let g,X,Y,O;
     if(!F){X=B.clone().sub(A);if(X.dot(new THREE.Vector3(0,1,0).cross(N))<0){[A,B]=[B,A];X.negate()}const L=X.length();X.normalize();
       N.sub(X.clone().multiplyScalar(N.dot(X))).normalize();Y=new THREE.Vector3().crossVectors(N,X);
@@ -566,12 +571,12 @@ $('xrBtn').onclick=async()=>{const msg=t=>{$('arHint').textContent=t};
       g=sweep(prof,[[0,0],[0,H],[W,H],[W,0]],true).g;g.rotateX(Math.PI/2)}
     model=new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:mt.color,metalness:mt.metalness,roughness:mt.roughness,side:THREE.DoubleSide,flatShading:true}));
     model.matrixAutoUpdate=false;model.matrix.makeBasis(X,Y,N).setPosition(O);sc.add(model)}
-  session.addEventListener('select',()=>{if(!ret.visible||pts.length>=2)return;const m=ret.matrix,p=new THREE.Vector3().setFromMatrixPosition(m),n=new THREE.Vector3().setFromMatrixColumn(m,1).normalize();
+  session.addEventListener('select',()=>{if(pts.length>=2)return;if(!ret.visible){say('هنوز سطحی شناسایی نشده؛ تا حلقهٔ نارنجی روی دیوار دیده نشود، زدن روی صفحه کار نمی‌کند. گوشی را آرام حرکت بده؛ نور بیشتر یا یک تکه نوارچسب روی دیوار کمک می‌کند.');setTimeout(()=>say(),3500);return}const m=ret.matrix,p=new THREE.Vector3().setFromMatrixPosition(m),n=new THREE.Vector3().setFromMatrixColumn(m,1).normalize();
     pts.push({p,n});const k=new THREE.Mesh(new THREE.SphereGeometry(.012,12,8),new THREE.MeshBasicMaterial({color:0x3b6fb5}));k.position.copy(p);sc.add(k);marks.push(k);place();say()});
   document.querySelector('#xrOv .row').addEventListener('beforexrselect',e=>e.preventDefault());
   $('xrUndo').onclick=()=>{if(!pts.length)return;pts.pop();sc.remove(marks.pop());place();say()};
   $('xrEdge').onclick=()=>{top=!top;place()};$('xrFlip').onclick=()=>{flip=!flip;place()};$('xrExit').onclick=()=>session.end();
-  r.setAnimationLoop((t,fr)=>{if(fr){const hr=fr.getHitTestResults(hts);if(hr.length){ret.visible=pts.length<2;ret.matrix.fromArray(hr[0].getPose(ref).transform.matrix)}else ret.visible=false}r.render(sc,cam)});
+  r.setAnimationLoop((t,fr)=>{if(fr){const hr=fr.getHitTestResults(hts);const was=ret.visible;if(hr.length){ret.visible=pts.length<2;ret.matrix.fromArray(hr[0].getPose(ref).transform.matrix);lastHit=t}else if(t-lastHit>400)ret.visible=false;if(was!==ret.visible&&pts.length<2)say()}r.render(sc,cam)});
   session.addEventListener('end',()=>{r.setAnimationLoop(null);hts.cancel&&hts.cancel();r.dispose();r.domElement.remove();ov.style.display='none'})};
 function alertBox(t){const el=$('xrNote')||Object.assign(document.createElement('p'),{id:'xrNote',className:'warn'});el.textContent=t;$('xrRow').after(el)}
 
