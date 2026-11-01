@@ -83,7 +83,7 @@ footer{text-align:center;font-size:11px;color:var(--mut);padding:18px 12px 26px}
     <label>ارتفاع واقعی مقطع (سانتی‌متر)<input id="hcm" type="number" value="12" min="0.5" step="0.5"></label>
     <label>حساسیت خط<input id="sens" type="range" min="4" max="40" value="14"></label>
     <label>بستن شکاف‌ها<input id="gap" type="range" min="0" max="8" value="2"></label>
-    <label>ساده‌سازی (نقطهٔ کمتر)<input id="eps" type="range" min="1" max="12" value="4"></label>
+    <label>ساده‌سازی (نقطهٔ کمتر)<input id="eps" type="range" min="1" max="14" value="6"></label>
     <label>صاف کردن خطوط افقی و عمودی (۹۰°)<input id="snap" type="checkbox" checked></label>
     <label>اصلاح بیشتر: ۴۵° و قوس دقیق (آزمایشی)<input id="adv" type="checkbox"></label>
     <div class="row" style="margin:6px 0"><button id="rot">⟳ چرخش ۹۰°</button><button id="mir">⇋ قرینه</button></div>
@@ -144,7 +144,7 @@ const libs=Promise.all([import('three'),import('./OrbitControls.js')]).then(([a,
 const $=id=>document.getElementById(id);
 
 let srcCanvas=null,srcGray=null,SW=0,SH=0,corners=null;
-let warped=null,WW=0,WH=0,bgCanvas=null,shape=null,mode='S';
+let autoOri=false,warped=null,WW=0,WH=0,bgCanvas=null,shape=null,mode='S';
 
 /* ---------- navigation ---------- */
 function go(n){for(let i=1;i<=4;i++){$('s'+i).classList.toggle('show',i===n);$('st'+i).classList.toggle('on',i===n)}
@@ -159,7 +159,8 @@ function loadCanvas(c){
   srcCanvas=document.createElement('canvas');srcCanvas.width=SW;srcCanvas.height=SH;
   const x=srcCanvas.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,SW,SH);x.drawImage(c,0,0,SW,SH);
   const d=x.getImageData(0,0,SW,SH).data;srcGray=new Uint8Array(SW*SH);
-  for(let i=0;i<SW*SH;i++)srcGray[i]=(d[i*4]*.299+d[i*4+1]*.587+d[i*4+2]*.114)|0;
+  const g0=new Uint8Array(SW*SH);for(let i=0;i<SW*SH;i++)g0[i]=Math.min(d[i*4],d[i*4+1],d[i*4+2]);
+  for(let y=0;y<SH;y++)for(let x=0;x<SW;x++){let m=255;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const xx=x+dx,yy=y+dy;if(xx>=0&&yy>=0&&xx<SW&&yy<SH){const v=g0[yy*SW+xx];if(v<m)m=v}}srcGray[y*SW+x]=m}
   setFull();enable(2);go(2);
 }
 async function pick(e){const f=e.target.files[0];e.target.value='';if(!f)return;$('lerr').textContent='در حال خواندن عکس…';
@@ -222,7 +223,7 @@ function xform(rot){const W=WW,H=WH,n=new Uint8Array(W*H);
   else{for(let y=0;y<H;y++)for(let x=0;x<W;x++)n[y*W+(W-1-x)]=warped[y*W+x];if(shape)for(const v of shape.V)v.x=W-v.x}
   warped=n;makeBg();drawShape()}
 
-$('toS3').onclick=()=>{warp();detect();enable(3);go(3)};
+$('toS3').onclick=()=>{warp();autoOri=true;detect();enable(3);go(3)};
 
 /* ---------- step 3: detection ---------- */
 function morph(m,W,H,r,dil){const t=new Uint8Array(W*H),o=new Uint8Array(W*H);
@@ -257,23 +258,29 @@ function detect(){const W=WW,H=WH,g=warped,N=W*H;$('warn').textContent='';
   for(let y=0;y<H;y++){const y0=Math.max(0,y-R),y1=Math.min(H,y+R+1);for(let x=0;x<W;x++){const x0=Math.max(0,x-R),x1=Math.min(W,x+R+1);
     const m=(I[y1*(W+1)+x1]-I[y0*(W+1)+x1]-I[y1*(W+1)+x0]+I[y0*(W+1)+x0])/((y1-y0)*(x1-x0));ink[y*W+x]=g[y*W+x]<m-C?1:0}}
   const bd=4;for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(x<bd||y<bd||x>=W-bd||y>=H-bd)ink[y*W+x]=0;
-  const r=+$('gap').value;if(r>0)ink=morph(ink,W,H,r,true);
-  const bg=new Uint8Array(N),st=[];for(let x=0;x<W;x++)st.push(x,(H-1)*W+x);for(let y=0;y<H;y++)st.push(y*W,y*W+W-1);
-  while(st.length){const i=st.pop();if(bg[i]||ink[i])continue;bg[i]=1;const x=i%W;if(x>0)st.push(i-1);if(x<W-1)st.push(i+1);if(i>=W)st.push(i-W);if(i<N-W)st.push(i+W)}
-  let fill=new Uint8Array(N);for(let i=0;i<N;i++)fill[i]=bg[i]?0:1;
-  if(r>0)fill=morph(fill,W,H,r,false);
-  // largest component
-  const lab=new Int32Array(N);let best=null,bestN=0,id=0;
-  for(let s=0;s<N;s++){if(!fill[s]||lab[s])continue;id++;const q=[s],cmp=[];lab[s]=id;
-    while(q.length){const i=q.pop();cmp.push(i);const x=i%W;for(const j of[x>0?i-1:-1,x<W-1?i+1:-1,i-W,i+W])if(j>=0&&j<N&&fill[j]&&!lab[j]){lab[j]=id;q.push(j)}}
-    if(cmp.length>bestN){bestN=cmp.length;best=cmp}}
+  const ink0=ink;let best=null,bestN=0,closed=false,r0=+$('gap').value,rUsed=r0;
+  for(let r=r0;r<=r0+16;r+=2){ink=r>0?morph(ink0,W,H,r,true):ink0;
+    const bg=new Uint8Array(N),st=[];for(let x=0;x<W;x++)st.push(x,(H-1)*W+x);for(let y=0;y<H;y++)st.push(y*W,y*W+W-1);
+    while(st.length){const i=st.pop();if(bg[i]||ink[i])continue;bg[i]=1;const x=i%W;if(x>0)st.push(i-1);if(x<W-1)st.push(i+1);if(i>=W)st.push(i-W);if(i<N-W)st.push(i+W)}
+    let fill=new Uint8Array(N);for(let i=0;i<N;i++)fill[i]=bg[i]?0:1;
+    if(r>0)fill=morph(fill,W,H,r,false);
+    const lab=new Int32Array(N);let bb=null,bn=0,id=0;
+    for(let s=0;s<N;s++){if(!fill[s]||lab[s])continue;id++;const q=[s],cmp=[];lab[s]=id;
+      while(q.length){const i=q.pop();cmp.push(i);const x=i%W;for(const j of[x>0?i-1:-1,x<W-1?i+1:-1,i-W,i+W])if(j>=0&&j<N&&fill[j]&&!lab[j]){lab[j]=id;q.push(j)}}
+      if(cmp.length>bn){bn=cmp.length;bb=cmp}}
+    if(!bb)continue;let inkIn=0;for(const i of bb)if(ink0[i])inkIn++;
+    best=bb;bestN=bn;rUsed=r;if(bn>2000&&inkIn/bn<.5){closed=true;break}}
   if(!best||bestN<200){shape=null;$('warn').textContent='مقطعی پیدا نشد. حساسیت یا کادر را تغییر بده.';drawShape();return}
-  const mask=new Uint8Array(N);let inkIn=0;for(const i of best){mask[i]=1;if(ink[i])inkIn++}
-  if(inkIn/bestN>.8)$('warn').textContent='به نظر می‌رسد مقطع بسته نیست. «بستن شکاف‌ها» را بیشتر کن یا خط دور مقطع را کامل ببند.';
+  const mask=new Uint8Array(N);for(const i of best)mask[i]=1;
+  if(!closed)$('warn').textContent='مقطع بسته نیست. «بستن شکاف‌ها» را بیشتر کن یا فاصلهٔ بین خطوط را کم کن.';
+  else if(rUsed>r0)$('warn').textContent='';
   const P=trace(mask,W,H);shape=P&&P.length>8?beautify(P):null;
-  if(shape&&$('snap').checked)snapHV(shape);
+  if(shape){if($('snap').checked)snapHV(shape);merge(shape);if($('snap').checked)snapHV(shape)}
   if(shape&&$('adv').checked){snap(shape);merge(shape)}
-  drawShape()}
+  if(shape&&autoOri){let bl=0,bx=0,x0=1e9,x1=-1e9;for(const v of shape.V){x0=Math.min(x0,v.x);x1=Math.max(x1,v.x)}
+    for(const e of shape.E){if(e.t!=='L')continue;const a=shape.V[e.a],b=shape.V[e.b];if(Math.abs(a.x-b.x)<2){const l=Math.abs(a.y-b.y);if(l>bl){bl=l;bx=a.x}}}
+    if(bl>0&&Math.abs(bx-x1)<Math.abs(bx-x0)){autoOri=false;xform(false);return}}
+  autoOri=false;drawShape()}
 
 function beautify(P){const n=P.length,eps=+$('eps').value;
   const S=P.map((_,i)=>{let sx=0,sy=0;for(let k=-2;k<=2;k++){const q=P[(i+k+n)%n];sx+=q[0];sy+=q[1]}return[sx/5,sy/5]});
@@ -297,7 +304,7 @@ function beautify(P){const n=P.length,eps=+$('eps').value;
       let md=0;for(const p of pts)md=Math.max(md,Math.abs(Math.hypot(p[0]-c[0],p[1]-c[1])-c[2]));
       const a=pts[0],b=pts[pts.length-1],L=Math.hypot(b[0]-a[0],b[1]-a[1])||1;let sag=0;
       for(const p of pts)sag=Math.max(sag,Math.abs((p[0]-a[0])*(b[1]-a[1])-(p[1]-a[1])*(b[0]-a[0]))/L);
-      if(md<tol&&sag>eps*1.5&&c[2]<Math.max(WW,WH)*2){best=j;bp=pts}}
+      if(md<tol&&sag>Math.max(eps*1.5,L*.12)&&c[2]<Math.max(WW,WH)*2){best=j;bp=pts}}
     const va=V.length;V.push({x:S[K[k]][0],y:S[K[k]][1]});
     if(best>0){const mid=bp[bp.length>>1];V.push({x:mid[0],y:mid[1],mid:1});E.push({t:'A',a:va,m:va+1});k=best}
     else{E.push({t:'L',a:va});k++}}
@@ -306,12 +313,12 @@ function beautify(P){const n=P.length,eps=+$('eps').value;
 function snapHV(sh){const tol=Math.tan(10*Math.PI/180);
   for(let it=0;it<2;it++)for(const e of sh.E){if(e.t!=='L')continue;const a=sh.V[e.a],b=sh.V[e.b],dx=b.x-a.x,dy=b.y-a.y;
     if(Math.abs(dy)<=Math.abs(dx)*tol){a.y=b.y=(a.y+b.y)/2}else if(Math.abs(dx)<=Math.abs(dy)*tol){a.x=b.x=(a.x+b.x)/2}}}
-function merge(sh){const E=sh.E,V=sh.V,minL=Math.hypot(WW,WH)*.006,ang=e=>Math.atan2(V[e.b].y-V[e.a].y,V[e.b].x-V[e.a].x);
+function merge(sh){const E=sh.E,V=sh.V,minL=Math.hypot(WW,WH)*.012,ang=e=>Math.atan2(V[e.b].y-V[e.a].y,V[e.b].x-V[e.a].x);
   for(let ch=true;ch&&E.length>3;){ch=false;
     for(let i=0;i<E.length;i++){const e=E[i],j=(i+1)%E.length,f=E[j];if(e.t!=='L')continue;
       const a=V[e.a],b=V[e.b];if(Math.hypot(b.x-a.x,b.y-a.y)<minL){a.x=(a.x+b.x)/2;a.y=(a.y+b.y)/2;E.splice(i,1);const k=i%E.length,p=(k-1+E.length)%E.length;E[k].a=e.a;E[p].b=e.a;ch=true;break}
       if(f.t!=='L')continue;let d=Math.abs(ang(e)-ang(f));if(d>Math.PI)d=2*Math.PI-d;
-      if(d<12*Math.PI/180){e.b=f.b;E.splice(j,1);ch=true;break}}}
+      if(d<16*Math.PI/180){e.b=f.b;E.splice(j,1);ch=true;break}}}
   const NV=[],mp=new Map(),g=i=>{if(!mp.has(i)){mp.set(i,NV.length);NV.push(V[i])}return mp.get(i)};
   for(const e of E){e.a=g(e.a);if(e.t==='A')e.m=g(e.m)}E.forEach((e,i)=>e.b=E[(i+1)%E.length].a);sh.V=NV}
 function snap(sh){const D=Math.PI/180,hv=Math.tan(15*D);
