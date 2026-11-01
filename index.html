@@ -83,7 +83,7 @@ footer{text-align:center;font-size:11px;color:var(--mut);padding:18px 12px 26px}
     <label>ارتفاع واقعی مقطع (سانتی‌متر)<input id="hcm" type="number" value="12" min="0.5" step="0.5"></label>
     <label>حساسیت خط<input id="sens" type="range" min="4" max="40" value="14"></label>
     <label>بستن شکاف‌ها<input id="gap" type="range" min="0" max="8" value="2"></label>
-    <label>صاف‌سازی<input id="eps" type="range" min="1" max="14" value="4"></label>
+    <label>ساده‌سازی (نقطهٔ کمتر)<input id="eps" type="range" min="1" max="12" value="4"></label>
     <label>زاویه‌های دقیق (۹۰°، ۴۵° و قوس ۹۰°)<input id="snap" type="checkbox" checked></label>
     <div class="row" style="margin:6px 0"><button id="rot">⟳ چرخش ۹۰°</button><button id="mir">⇋ قرینه</button></div>
     <div class="row"><button id="redo">تشخیص دوباره</button><button id="toS4" class="pri">ساخت سه‌بعدی</button></div>
@@ -270,24 +270,24 @@ function detect(){const W=WW,H=WH,g=warped,N=W*H;$('warn').textContent='';
   const mask=new Uint8Array(N);let inkIn=0;for(const i of best){mask[i]=1;if(ink[i])inkIn++}
   if(inkIn/bestN>.8)$('warn').textContent='به نظر می‌رسد مقطع بسته نیست. «بستن شکاف‌ها» را بیشتر کن یا خط دور مقطع را کامل ببند.';
   const P=trace(mask,W,H);shape=P&&P.length>8?beautify(P):null;
-  if(shape&&$('snap').checked)snap(shape);
+  if(shape){const sn=$('snap').checked;if(sn)snap(shape);merge(shape);if(sn){snap(shape);merge(shape)}}
   drawShape()}
 
-function beautify(P){const n=P.length,eps=+$('eps').value;
+function beautify(P){const n=P.length,eps=+$('eps').value*Math.max(WW,WH)/450;
   const S=P.map((_,i)=>{let sx=0,sy=0;for(let k=-2;k<=2;k++){const q=P[(i+k+n)%n];sx+=q[0];sy+=q[1]}return[sx/5,sy/5]});
   let f=0,fd=0;for(let i=0;i<n;i++){const d=(S[i][0]-S[0][0])**2+(S[i][1]-S[0][1])**2;if(d>fd){fd=d;f=i}}
   const A=rdp(S.slice(0,f+1),eps),B=rdp(S.slice(f).concat([S[0]]),eps).map(i=>i+f);
   let K=A.concat(B.slice(1,-1));
   const turns=K=>K.map((_,i)=>{const q=K.length,a=S[K[(i-1+q)%q]],b=S[K[i]],c=S[K[(i+1)%q]];let d=Math.atan2(c[1]-b[1],c[0]-b[0])-Math.atan2(b[1]-a[1],b[0]-a[0]);
     while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;return d});
-  const minL=eps*3;for(let ch=true;ch&&K.length>3;){ch=false;const T=turns(K);
+  const minL=Math.max(eps*3,Math.hypot(WW,WH)*.014);for(let ch=true;ch&&K.length>3;){ch=false;const T=turns(K);
     for(let i=0;i<K.length;i++){const j=(i+1)%K.length,a=S[K[i]],b=S[K[j]];
       if(Math.hypot(a[0]-b[0],a[1]-b[1])<minL){K.splice(Math.abs(T[i])<Math.abs(T[j])?i:j,1);ch=true;break}}}
   const m=K.length;if(m<3)return null;const T=turns(K);
   let s0=0;for(let i=1;i<m;i++)if(Math.abs(T[i])>Math.abs(T[s0]))s0=i;
   K=K.slice(s0).concat(K.slice(0,s0));const T2=T.slice(s0).concat(T.slice(0,s0));
   const seg=(i,j)=>{const a=K[i],b=K[j%m],out=[];let k=a;while(out.length<=n){out.push(S[k]);if(k===b&&out.length>1)break;k=(k+1)%n}return out};
-  const V=[],E=[],tol=Math.max(2.5,eps*1.4);let k=0;
+  const V=[],E=[],tol=Math.max(3,eps*.7);let k=0;
   while(k<m){let best=-1,bp=null;
     for(let j=k+2;j<=m&&j-k<=60;j++){if(k===0&&j===m)break;
       let ok=true;for(let i=k+1;i<j;i++){const t=T2[i];if(Math.abs(t)>.9||Math.sign(t)!==Math.sign(T2[k+1])){ok=false;break}}if(!ok)break;
@@ -301,16 +301,26 @@ function beautify(P){const n=P.length,eps=+$('eps').value;
     else{E.push({t:'L',a:va});k++}}
   E.forEach((e,i)=>e.b=E[(i+1)%E.length].a);return{V,E}}
 
+function merge(sh){const E=sh.E,V=sh.V,minL=Math.hypot(WW,WH)*.014,ang=e=>Math.atan2(V[e.b].y-V[e.a].y,V[e.b].x-V[e.a].x);
+  for(let ch=true;ch&&E.length>3;){ch=false;
+    for(let i=0;i<E.length;i++){const e=E[i],j=(i+1)%E.length,f=E[j];if(e.t!=='L')continue;
+      const a=V[e.a],b=V[e.b];if(Math.hypot(b.x-a.x,b.y-a.y)<minL){a.x=(a.x+b.x)/2;a.y=(a.y+b.y)/2;E.splice(i,1);const k=i%E.length,p=(k-1+E.length)%E.length;E[k].a=e.a;E[p].b=e.a;ch=true;break}
+      if(f.t!=='L')continue;let d=Math.abs(ang(e)-ang(f));if(d>Math.PI)d=2*Math.PI-d;
+      if(d<12*Math.PI/180){e.b=f.b;E.splice(j,1);ch=true;break}}}
+  const NV=[],mp=new Map(),g=i=>{if(!mp.has(i)){mp.set(i,NV.length);NV.push(V[i])}return mp.get(i)};
+  for(const e of E){e.a=g(e.a);if(e.t==='A')e.m=g(e.m)}E.forEach((e,i)=>e.b=E[(i+1)%E.length].a);sh.V=NV}
 function snap(sh){const D=Math.PI/180,hv=Math.tan(15*D);
   // classify once: lines H / V / 45°, arcs ~90° → quarter arcs
   for(const e of sh.E){const a=sh.V[e.a],b=sh.V[e.b],dx=b.x-a.x,dy=b.y-a.y;e.k=null;
     if(e.t==='L'){if(Math.abs(dy)<=Math.abs(dx)*hv)e.k='H';else if(Math.abs(dx)<=Math.abs(dy)*hv)e.k='V';
       else{const ang=Math.atan2(Math.abs(dy),Math.abs(dx))/D;if(Math.abs(ang-45)<=12)e.k='D'}}
     else{const m=sh.V[e.m],c=circ3(a,m,b);if(!c)continue;let sw=Math.abs(Math.atan2(a.y-c[1],a.x-c[0])-Math.atan2(b.y-c[1],b.x-c[0]))/D;if(sw>180)sw=360-sw;
-      if(sw>60&&sw<120&&Math.abs(dx)>1&&Math.abs(dy)>1){const c1=[a.x,b.y],c2=[b.x,a.y];e.k=Math.hypot(c1[0]-c[0],c1[1]-c[1])<Math.hypot(c2[0]-c[0],c2[1]-c[1])?'Q1':'Q2'}}}
+      if(sw>60&&sw<120&&Math.abs(dx)>1&&Math.abs(dy)>1){const c1=[a.x,b.y],c2=[b.x,a.y];e.k=Math.hypot(c1[0]-c[0],c1[1]-c[1])<Math.hypot(c2[0]-c[0],c2[1]-c[1])?'Q1':'Q2'}else if(sw>=150)e.k='S'}}
   for(let it=0;it<8;it++)for(const e of sh.E){if(!e.k)continue;const a=sh.V[e.a],b=sh.V[e.b];
     if(e.k==='H')a.y=b.y=(a.y+b.y)/2;else if(e.k==='V')a.x=b.x=(a.x+b.x)/2;
     else if(e.k==='D'){const dx=b.x-a.x,dy=b.y-a.y,d=(Math.abs(dx)+Math.abs(dy))/2,mx=(a.x+b.x)/2,my=(a.y+b.y)/2,tx=Math.sign(dx)*d/2,ty=Math.sign(dy)*d/2;a.x=mx-tx;a.y=my-ty;b.x=mx+tx;b.y=my+ty}
+    else if(e.k==='S'){const dx=b.x-a.x,dy=b.y-a.y;if(Math.abs(dy)<=Math.abs(dx)*hv)a.y=b.y=(a.y+b.y)/2;else if(Math.abs(dx)<=Math.abs(dy)*hv)a.x=b.x=(a.x+b.x)/2;
+      const m=sh.V[e.m],cx=(a.x+b.x)/2,cy=(a.y+b.y)/2,r=Math.hypot(b.x-a.x,b.y-a.y)/2||1,px=-(b.y-a.y)/(2*r),py=(b.x-a.x)/(2*r),sd=Math.sign((m.x-cx)*px+(m.y-cy)*py)||1;m.x=cx+px*r*sd;m.y=cy+py*r*sd}
     else{const dx=b.x-a.x,dy=b.y-a.y,r=(Math.abs(dx)+Math.abs(dy))/2,ex=(Math.sign(dx)*r-dx)/2,ey=(Math.sign(dy)*r-dy)/2;a.x-=ex;a.y-=ey;b.x+=ex;b.y+=ey;
       const c=e.k==='Q1'?[a.x,b.y]:[b.x,a.y],m=sh.V[e.m],ux=(a.x+b.x)/2-c[0],uy=(a.y+b.y)/2-c[1],l=Math.hypot(ux,uy)||1;m.x=c[0]+ux/l*r;m.y=c[1]+uy/l*r}}}
 
