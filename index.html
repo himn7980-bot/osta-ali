@@ -105,7 +105,7 @@ footer{text-align:center;font-size:11px;color:var(--mut);padding:18px 12px 26px}
       <p class="hint" style="margin:0 0 8px">با انتشار، مقطع به گالری مشترک اوستاها اضافه می‌شود (عکس اصلی منتشر نمی‌شود).</p>
       <div class="row"><button id="gCancel">انصراف</button><button id="gOk" class="pri">ذخیره</button></div>
     </div>
-    <div class="row" style="margin-bottom:8px"><button id="xPdf">📄 شابلون چاپی ۱:۱ (PDF — A4 / A3 خودکار)</button></div>
+    <div class="row" style="margin-bottom:8px"><button id="xPdf">📄 شابلون چاپی ۱:۱ (PDF)</button><button id="xDxf3">📐 مقطع اتوکد (DXF)</button></div>
     <div id="pdfTxt" class="hint" style="text-align:center"></div>
     <div class="row"><button id="redo">تشخیص دوباره</button><button id="toS4" class="pri">ساخت سه‌بعدی</button></div>
   </div>
@@ -782,9 +782,22 @@ async function dl(name,data,type){const blob=data instanceof Blob?data:new Blob(
 $('xSvg').onclick=()=>{const pr=profileCm(),M=10,W=pr.w*10+2*M,H=pr.h*10+2*M+12;
   const pts=pr.pts.map(([u,v])=>`${(u*10+M).toFixed(2)},${((pr.h-v)*10+M).toFixed(2)}`).join(' ');
   dl('osta-ali-shablon.svg',`<svg xmlns="http://www.w3.org/2000/svg" width="${W.toFixed(1)}mm" height="${H.toFixed(1)}mm" viewBox="0 0 ${W.toFixed(2)} ${H.toFixed(2)}"><polygon points="${pts}" fill="none" stroke="#000" stroke-width="0.3"/><text x="${M}" y="${(H-5).toFixed(1)}" font-size="3.5" font-family="Tahoma">W ${(pr.w*10).toFixed(1)} mm x H ${(pr.h*10).toFixed(1)} mm - print at 100%</text></svg>`,'image/svg+xml')};
-$('xDxf').onclick=()=>{const pr=profileCm();let s='0\nSECTION\n2\nENTITIES\n0\nPOLYLINE\n8\nSHABLON\n66\n1\n70\n1\n10\n0\n20\n0\n30\n0\n';
-  for(const[u,v]of pr.pts)s+=`0\nVERTEX\n8\nSHABLON\n10\n${(u*10).toFixed(3)}\n20\n${(v*10).toFixed(3)}\n30\n0\n`;
-  dl('osta-ali-shablon.dxf',s+'0\nSEQEND\n0\nENDSEC\n0\nEOF\n','application/dxf')};
+function makeDxf(){const P=samplePoly();let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const[x,y]of P){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}
+  const k=(+$('hcm').value||1)*10/((y1-y0)||1),T=v=>[(v.x-x0)*k,(y1-v.y)*k],n=v=>v.toFixed(3),W=(x1-x0)*k,H=(y1-y0)*k,fl=$('ptype').value==='floor';let o='';
+  const ln=(a,b,ly,c)=>{o+=`0\nLINE\n8\n${ly}\n62\n${c}\n10\n${n(a[0])}\n20\n${n(a[1])}\n30\n0\n11\n${n(b[0])}\n21\n${n(b[1])}\n31\n0\n`};
+  const tx=(p,h,t,ly)=>{o+=`0\nTEXT\n8\n${ly}\n62\n3\n10\n${n(p[0])}\n20\n${n(p[1])}\n30\n0\n40\n${h}\n1\n${t}\n`};
+  for(const e of shape.E){const A=T(shape.V[e.a]),B=T(shape.V[e.b]);
+    if(e.t==='L'){ln(A,B,'PROFILE',7);continue}
+    const M=T(shape.V[e.m]),c=circ3({x:A[0],y:A[1]},{x:M[0],y:M[1]},{x:B[0],y:B[1]});if(!c){ln(A,B,'PROFILE',7);continue}
+    const an=p=>((Math.atan2(p[1]-c[1],p[0]-c[0])*180/Math.PI)+360)%360,ta=an(A),tm=an(M),tb=an(B),ccw=((tm-ta+360)%360)<((tb-ta+360)%360);
+    const[s0,s1]=ccw?[ta,tb]:[tb,ta];o+=`0\nARC\n8\nPROFILE\n62\n7\n10\n${n(c[0])}\n20\n${n(c[1])}\n30\n0\n40\n${n(c[2])}\n50\n${n(s0)}\n51\n${n(s1)}\n`}
+  ln([0,-8],[0,H+8],'REF',8);fl?ln([-8,0],[W+8,0],'REF',8):ln([-8,H],[W+8,H],'REF',8);
+  const d=-12;ln([0,d],[W,d],'DIM',3);ln([0,d-2],[0,d+2],'DIM',3);ln([W,d-2],[W,d+2],'DIM',3);tx([W/2-6,d-6],3,`${W.toFixed(1)} mm`,'DIM');
+  ln([d,0],[d,H],'DIM',3);ln([d-2,0],[d+2,0],'DIM',3);ln([d-2,H],[d+2,H],'DIM',3);tx([d-22,H/2],3,`${H.toFixed(1)} mm`,'DIM');
+  tx([0,d-14],3.5,'OSTA ALI - SCALE 1:1 (mm)','DIM');
+  return '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n70\n4\n0\nENDSEC\n0\nSECTION\n2\nENTITIES\n'+o+'0\nENDSEC\n0\nEOF\n'}
+$('xDxf').onclick=()=>{if(shape)dl('osta-ali-profile.dxf',makeDxf(),'application/dxf')};
+$('xDxf3').onclick=()=>{if(shape)dl('osta-ali-profile.dxf',makeDxf(),'application/dxf')};window.__dxf=makeDxf;
 $('xStl').onclick=()=>{if(!mesh)return;const p=mesh.geometry.attributes.position.array,t=p.length/9,b=new ArrayBuffer(84+t*50),d=new DataView(b);
   d.setUint32(80,t,true);let o=84;for(let i=0;i<t;i++){o+=12;for(let k=0;k<9;k++){d.setFloat32(o,p[i*9+k]*10,true);o+=4}o+=2}
   dl('osta-ali-model-mm.stl',b,'model/stl')};
