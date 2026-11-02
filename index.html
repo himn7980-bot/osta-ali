@@ -101,7 +101,8 @@ footer{text-align:center;font-size:11px;color:var(--mut);padding:18px 12px 26px}
     <div id="gForm" class="card" style="display:none;background:var(--bg)">
       <label>نام<input id="gName" type="text" style="flex:1;font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px" placeholder="مثلاً گلویی سالن"></label>
       <label>دسته<select id="gType" style="font:inherit;padding:6px;border-radius:8px;border:1px solid var(--line)"></select></label>
-      <label>در گالری آنلاین هم منتشر شود<input id="gPub" type="checkbox"></label>
+      <label>در گالری آنلاین هم منتشر شود<input id="gPub" type="checkbox" checked></label>
+      <p class="hint" style="margin:0 0 8px">با انتشار، مقطع به گالری مشترک اوستاها اضافه می‌شود (عکس اصلی منتشر نمی‌شود).</p>
       <div class="row"><button id="gCancel">انصراف</button><button id="gOk" class="pri">ذخیره</button></div>
     </div>
     <div class="row" style="margin-bottom:8px"><button id="xPdf">📄 شابلون چاپی ۱:۱ (PDF — A4 / A3 خودکار)</button></div>
@@ -716,7 +717,7 @@ $('gSave').onclick=()=>{if(!shape)return;$('gForm').style.display='block';$('gTy
 $('gCancel').onclick=()=>$('gForm').style.display='none';
 $('gOk').onclick=()=>{const pr=profileCm(),a=gLoad();
   a.unshift({id:Date.now(),name:$('gName').value.trim()||'بدون نام',type:$('gType').value,w:+pr.w.toFixed(1),h:+pr.h.toFixed(1),hcm:+$('hcm').value,ptype:$('ptype').value,WW,WH,shape:JSON.parse(JSON.stringify(shape)),pts:pr.pts.map(([u,v])=>[+u.toFixed(2),+v.toFixed(2)]),date:new Date().toISOString().slice(0,10)});
-  if(!gStore(a)){alertMsg('حافظه پر است؛ چند مورد قدیمی را حذف کن.');return}if($('gPub').checked)publish(a[0]).then(()=>alertMsg('✓ ذخیره و در گالری آنلاین منتشر شد.')).catch(e=>alertMsg('ذخیره شد، ولی انتشار آنلاین نشد: '+e.message));$('gForm').style.display='none';$('gName').value='';$('pdfTxt').textContent='✓ در گالری ذخیره شد.'};
+  if(!gStore(a)){alertMsg('حافظه پر است؛ چند مورد قدیمی را حذف کن.');return}if($('gPub').checked){a[0].pending=true;gStore(a);publish(a[0]).then(()=>alertMsg('✓ ذخیره و در گالری آنلاین منتشر شد.')).catch(e=>alertMsg('ذخیره شد؛ انتشار آنلاین بعداً خودکار انجام می‌شود. ('+e.message+')'))}$('gForm').style.display='none';$('gName').value='';$('pdfTxt').textContent='✓ در گالری ذخیره شد.'};
 function alertMsg(t){$('pdfTxt').textContent=t}
 /* online gallery (Supabase REST) */
 const SB='https://kmpwxwghlqbjdcyrkdqf.supabase.co',SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttcHd4d2dobHFiamRjeXJrZHFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2MDk4MzcsImV4cCI6MjEwOTE4NTgzN30.l2aCTdt5Lv4X5SmL1pbPDlgjVjlC_DvEMtSJYG6FGsA';
@@ -742,16 +743,18 @@ async function sbFetch(path,opt={},auth=false){const h={apikey:SK,Authorization:
   if(auth){const s0=await sbAuth();h.Authorization='Bearer '+s0.access_token}
   const r=await fetch(SB+'/rest/v1/'+path,{...opt,headers:h});const t=await r.text();let j=null;try{j=t?JSON.parse(t):null}catch(e){}
   if(!r.ok)throw new Error(r.status===404||/relation|does not exist/.test(t)?'جدول گالری در Supabase ساخته نشده.':(j&&(j.message||j.hint))||('خطا '+r.status));return j}
-async function publish(g){const au=($('gAuthor').value||LS.get('author')||'').trim();if(!au)throw new Error('اول در تب گالری «نام شما» را بنویس.');
+async function publish(g){const au=(($('gAuthor').value||LS.get('author')||(sess()&&sess().name)||'').trim()||'ناشناس').slice(0,40);
   const rnd=o=>JSON.parse(JSON.stringify(o,(k,v)=>typeof v==='number'?Math.round(v*10)/10:v));
   await sbFetch('gallery',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({author:au,name:g.name.slice(0,60),type:g.type,w:g.w,h:g.h,data:{shape:rnd(g.shape),WW:g.WW,WH:g.WH,hcm:g.hcm,ptype:g.ptype,pts:g.pts}})},true);g.pub=true;
-  const a=gLoad(),i=a.findIndex(x=>x.id===g.id);if(i>=0){a[i].pub=true;gStore(a)}}
+  const a=gLoad(),i=a.findIndex(x=>x.id===g.id);if(i>=0){a[i].pub=true;a[i].pending=false;gStore(a)}}
+let syncing=false;async function syncPending(){if(syncing||!navigator.onLine)return;syncing=true;try{for(const g of gLoad().filter(x=>x.pending&&!x.pub)){try{await publish(g)}catch(e){break}}}finally{syncing=false}}
+addEventListener('online',syncPending);setTimeout(syncPending,4000);
 function gCard(g,on){const mine=on&&sess()&&g.user_id===sess().uid;
   return `<div class="card" style="display:flex;gap:12px;align-items:center">${thumb(g.pts,g.w,g.h)}<div style="flex:1;font-size:13px;line-height:1.9"><b>${esc(g.name)}</b><br>${esc(g.type)} — ${fa(g.w)} × ${fa(g.h)} cm<br><span class="hint">${on?'👤 '+esc(g.author)+' · ':''}${(g.date||'').slice(0,10)}</span>
   <div class="row" style="margin-top:4px"><button data-open="${g.id}">باز کردن</button>${!on?`<button data-pub="${g.id}" ${g.pub?'disabled':''}>${g.pub?'✓ منتشر شد':'🌐 انتشار'}</button><button data-del="${g.id}">حذف</button>`:mine?`<button data-odel="${g.id}">حذف</button>`:''}</div></div></div>`}
 const esc=t=>String(t||'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
 let gTmr;
-async function renderGal(){updWho();if(!$('gAuthor').value&&LS.get('author'))$('gAuthor').value=LS.get('author');const ft=$('fType').value,fw=parseFloat($('fW').value),fh=parseFloat($('fH').value),T=.5;
+async function renderGal(){updWho();syncPending();if(!$('gAuthor').value&&LS.get('author'))$('gAuthor').value=LS.get('author');const ft=$('fType').value,fw=parseFloat($('fW').value),fh=parseFloat($('fH').value),T=.5;
   $('gTabL').classList.toggle('on',!gOnline);$('gTabO').classList.toggle('on',gOnline);
   if(!gOnline){const a=gLoad().filter(g=>(!ft||g.type===ft)&&(isNaN(fw)||Math.abs(g.w-fw)<=T)&&(isNaN(fh)||Math.abs(g.h-fh)<=T));
     $('gList').innerHTML=a.length?a.map(g=>gCard(g,false)).join(''):'<p class="hint" style="text-align:center">موردی پیدا نشد. از مرحلهٔ «مقطع» با «💾 ذخیره در گالری» مقطع اضافه کن.</p>';return}
