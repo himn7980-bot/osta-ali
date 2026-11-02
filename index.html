@@ -76,7 +76,9 @@ footer{text-align:center;font-size:11px;color:var(--mut);padding:18px 12px 26px}
 
 <section id="s3">
   <div class="card">
+    <div class="row" style="margin-bottom:6px"><button id="zIn">＋ زوم</button><button id="zOut">－</button><button id="zFit">⤢ کامل</button></div>
     <canvas id="cv3"></canvas>
+    <label style="margin:6px 0">اسنپ زاویه هنگام جابه‌جایی (۰°، ۴۵°، ۹۰° — ۱۰°±)<input id="dsnap" type="checkbox" checked></label>
     <div class="row" style="margin-top:8px"><button id="eAdd">＋ نقطه</button><button id="eDel">− حذف</button><button id="eArc">⌒ قوس</button><button id="eLine">／ خط</button></div>
     <div id="selTxt" class="hint" style="text-align:center">روی یک خط یا نقطه بزن تا انتخاب شود.</div>
     <div id="dims"></div>
@@ -280,7 +282,7 @@ function fitCircle(P){const n=P.length;let mx=0,my=0;for(const p of P){mx+=p[0];
   const s=solve([[sxx,sxy,sx],[sxy,syy,sy],[sx,sy,n]],[-sxz,-syz,-sz]);if(s.some(v=>!isFinite(v)))return null;
   const cx=-s[0]/2,cy=-s[1]/2,r=Math.sqrt(cx*cx+cy*cy-s[2]);return isFinite(r)?[cx+mx,cy+my,r]:null}
 
-function detect(){sel=null;['eAdd','eDel','eArc','eLine'].forEach(id=>$(id).disabled=true);const W=WW,H=WH,g=warped,N=W*H;$('warn').textContent='';
+function detect(){sel=null;vz=1;vox=voy=0;['eAdd','eDel','eArc','eLine'].forEach(id=>$(id).disabled=true);const W=WW,H=WH,g=warped,N=W*H;$('warn').textContent='';
   const I=new Float64Array((W+1)*(H+1));
   for(let y=0;y<H;y++){let s=0;for(let x=0;x<W;x++){s+=g[y*W+x];I[(y+1)*(W+1)+x+1]=I[y*(W+1)+x+1]+s}}
   const R=Math.max(8,Math.round(Math.min(W,H)/25)),C=+$('sens').value;let ink=new Uint8Array(N);
@@ -379,7 +381,7 @@ function samplePoly(){const o=[];for(const e of shape.E){const a=shape.V[e.a];
 
 /* ---------- step 3: editor ---------- */
 const cv3=$('cv3');
-function drawShape(){if(!bgCanvas)return;cv3.width=WW;cv3.height=WH;const x=cv3.getContext('2d'),s=scl(cv3);
+function drawShape(){if(!bgCanvas)return;cv3.width=WW;cv3.height=WH;const x=cv3.getContext('2d'),s=scl(cv3)/vz;x.setTransform(vz,0,0,vz,-vox*vz,-voy*vz);
   x.globalAlpha=.4;x.drawImage(bgCanvas,0,0);x.globalAlpha=1;if(!shape){$('dims').textContent='';return}
   const P=samplePoly();let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const[a,b]of P){x0=Math.min(x0,a);x1=Math.max(x1,a);y0=Math.min(y0,b);y1=Math.max(y1,b)}
   x.lineWidth=5*s;x.strokeStyle='#3b6fb5';x.beginPath();x.moveTo(x0-4*s,y1+20*s);x.lineTo(x0-4*s,y0-4*s);x.lineTo(x1+20*s,y0-4*s);x.stroke();
@@ -390,6 +392,12 @@ function drawShape(){if(!bgCanvas)return;cv3.width=WW;cv3.height=WH;const x=cv3.
   if(sel&&sel.t==='v'&&shape.V[sel.i]){const v=shape.V[sel.i];x.beginPath();x.arc(v.x,v.y,14*s,0,7);x.fillStyle='rgba(224,123,0,.45)';x.fill()}
   for(const v of shape.V){x.beginPath();if(v.mid)x.arc(v.x,v.y,6*s,0,7);else x.rect(v.x-6*s,v.y-6*s,12*s,12*s);
     x.fillStyle=v.mid?'#fff':'#1f1d1a';x.fill();x.lineWidth=2*s;x.strokeStyle='#1f1d1a';x.stroke()}
+  if(dragI>=0&&guides.length){x.setLineDash([6*s,5*s]);x.lineWidth=1.5*s;x.strokeStyle='#e07b00';const L=Math.hypot(WW,WH);
+    for(const g of guides){x.beginPath();x.moveTo(g.A.x-Math.cos(g.th)*L,g.A.y-Math.sin(g.th)*L);x.lineTo(g.A.x+Math.cos(g.th)*L,g.A.y+Math.sin(g.th)*L);x.stroke()}x.setLineDash([])}
+  if(dragI>=0&&!shape.V[dragI].mid){const cm=(+$('hcm').value||1)/((y1-y0)||1),v=shape.V[dragI];x.font=`bold ${12*s}px Tahoma`;x.textAlign='center';x.direction='ltr';
+    for(const e of shape.E){if(e.t!=='L'||(e.a!==dragI&&e.b!==dragI))continue;const a=shape.V[e.a],b=shape.V[e.b];let ang=Math.round(Math.abs(Math.atan2(b.y-a.y,b.x-a.x))*180/Math.PI);if(ang>90)ang=180-ang;
+      const t=`${(Math.hypot(b.x-a.x,b.y-a.y)*cm).toFixed(1)} cm  ${ang}°`,mx=(a.x+b.x)/2,my=(a.y+b.y)/2,w=x.measureText(t).width+8*s;
+      x.fillStyle='rgba(31,29,26,.82)';x.fillRect(mx-w/2,my-16*s,w,18*s);x.fillStyle='#fff';x.fillText(t,mx,my-3*s)}}
   const pr=profileCm();$('dims').textContent=`مقطع: ${fa(pr.w)} × ${fa(pr.h)} سانتی‌متر — ${fa(shape.E.filter(e=>e.t==='L').length,0)} خط و ${fa(shape.E.filter(e=>e.t==='A').length,0)} قوس`}
 let sel=null,dragI=-1;
 function segD(p,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],l=dx*dx+dy*dy||1;let t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/l));return Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dy)}
@@ -402,12 +410,32 @@ const selEdge=()=>!sel?-1:sel.t==='e'?sel.i:shape.E.findIndex(e=>e.t==='A'&&e.m=
 function updSel(){const ei=selEdge(),e=ei>=0?shape.E[ei]:null,isMid=sel&&sel.t==='v'&&shape.V[sel.i]?.mid;
   $('eAdd').disabled=!(sel&&sel.t==='e'&&e&&e.t==='L');$('eArc').disabled=!(e&&e.t==='L');$('eLine').disabled=!(e&&e.t==='A');$('eDel').disabled=!sel||shape.E.length<=3;
   $('selTxt').textContent=!sel?'روی یک خط یا نقطه بزن تا انتخاب شود.':isMid?'وسط قوس انتخاب شد — بکش تا عمق قوس عوض شود.':sel.t==='v'?'گوشه انتخاب شد — بکش یا حذف کن.':e.t==='L'?'خط انتخاب شد — نقطه اضافه کن، تبدیل به قوس کن یا حذف کن.':'قوس انتخاب شد — تبدیل به خط کن یا حذف کن.'}
-cv3.onpointerdown=e=>{if(!shape)return;const p=cpt(cv3,e),s=scl(cv3);let bi=-1,bd=(26*s)**2;
+let vz=1,vox=0,voy=0,guides=[],pinch=null;const ptrs=new Map();
+const toW=p=>[p[0]/vz+vox,p[1]/vz+voy];
+function clampV(){vz=Math.max(1,Math.min(10,vz));vox=Math.max(0,Math.min(WW-WW/vz,vox));voy=Math.max(0,Math.min(WH-WH/vz,voy))}
+function zoomAt(c,nz){const w=toW(c);vz=nz;vox=w[0]-c[0]/vz;voy=w[1]-c[1]/vz;clampV();drawShape()}
+$('zIn').onclick=()=>zoomAt([WW/2,WH/2],vz*1.6);$('zOut').onclick=()=>zoomAt([WW/2,WH/2],vz/1.6);$('zFit').onclick=()=>{vz=1;vox=voy=0;drawShape()};
+cv3.addEventListener('wheel',e=>{e.preventDefault();zoomAt(cpt(cv3,e),vz*(e.deltaY<0?1.15:1/1.15))},{passive:false});
+function snapDrag(i,p){guides=[];if(!$('dsnap').checked||shape.V[i].mid)return p;const E=shape.E,nb=[];
+  const ei=E.find(e=>e.b===i),eo=E.find(e=>e.a===i);if(ei&&ei.t==='L')nb.push(shape.V[ei.a]);if(eo&&eo.t==='L')nb.push(shape.V[eo.b]);
+  const T=10*Math.PI/180,S=Math.PI/4;for(const A of nb){const ang=Math.atan2(p[1]-A.y,p[0]-A.x),sn=Math.round(ang/S)*S;if(Math.abs(ang-sn)<T)guides.push({A,th:sn})}
+  const proj=g=>{const dx=Math.cos(g.th),dy=Math.sin(g.th),t=(p[0]-g.A.x)*dx+(p[1]-g.A.y)*dy;return[g.A.x+dx*t,g.A.y+dy*t]};
+  if(guides.length===2){const[g1,g2]=guides,d1=[Math.cos(g1.th),Math.sin(g1.th)],d2=[Math.cos(g2.th),Math.sin(g2.th)],cr=d1[0]*d2[1]-d1[1]*d2[0];
+    if(Math.abs(cr)>1e-6){const t=((g2.A.x-g1.A.x)*d2[1]-(g2.A.y-g1.A.y)*d2[0])/cr,q=[g1.A.x+d1[0]*t,g1.A.y+d1[1]*t];
+      if(Math.hypot(q[0]-p[0],q[1]-p[1])<40*scl(cv3)/vz)return q}guides=[g1];return proj(g1)}
+  return guides.length?proj(guides[0]):p}
+cv3.onpointerdown=e=>{if(!shape)return;const c=cpt(cv3,e);ptrs.set(e.pointerId,c);cv3.setPointerCapture(e.pointerId);
+  if(ptrs.size===2){dragI=-1;guides=[];const[a,b]=[...ptrs.values()];pinch={d:Math.hypot(a[0]-b[0],a[1]-b[1]),w:toW([(a[0]+b[0])/2,(a[1]+b[1])/2]),z:vz};drawShape();return}
+  const p=toW(c),s=scl(cv3)/vz;let bi=-1,bd=(26*s)**2;
   shape.V.forEach((v,i)=>{const d=(v.x-p[0])**2+(v.y-p[1])**2;if(d<bd){bd=d;bi=i}});
-  if(bi>=0){sel={t:'v',i:bi};dragI=bi;cv3.setPointerCapture(e.pointerId)}else{const ei=hitEdge(p,22*s);sel=ei>=0?{t:'e',i:ei}:null}
+  if(bi>=0){sel={t:'v',i:bi};dragI=bi}else{const ei=hitEdge(p,22*s);sel=ei>=0?{t:'e',i:ei}:null;if(!sel&&vz>1)pinch={pan:c,ox:vox,oy:voy}}
   updSel();drawShape()};
-cv3.onpointermove=e=>{if(dragI<0)return;const p=cpt(cv3,e);shape.V[dragI].x=p[0];shape.V[dragI].y=p[1];drawShape()};
-cv3.onpointerup=cv3.onpointercancel=()=>{dragI=-1};
+cv3.onpointermove=e=>{if(!ptrs.has(e.pointerId))return;const c=cpt(cv3,e);ptrs.set(e.pointerId,c);
+  if(pinch&&ptrs.size===2){const[a,b]=[...ptrs.values()],m=[(a[0]+b[0])/2,(a[1]+b[1])/2];vz=pinch.z*Math.hypot(a[0]-b[0],a[1]-b[1])/(pinch.d||1);vz=Math.max(1,Math.min(10,vz));
+    vox=pinch.w[0]-m[0]/vz;voy=pinch.w[1]-m[1]/vz;clampV();drawShape();return}
+  if(pinch&&pinch.pan){vox=pinch.ox-(c[0]-pinch.pan[0])/vz;voy=pinch.oy-(c[1]-pinch.pan[1])/vz;clampV();drawShape();return}
+  if(dragI<0)return;const p=snapDrag(dragI,toW(c));shape.V[dragI].x=p[0];shape.V[dragI].y=p[1];drawShape()};
+cv3.onpointerup=cv3.onpointercancel=e=>{ptrs.delete(e.pointerId);if(ptrs.size<2&&pinch&&!pinch.pan)pinch=null;if(!ptrs.size){pinch=null;dragI=-1;guides=[];drawShape()}};
 $('eAdd').onclick=()=>{const i=selEdge(),E=shape.E,e=E[i];if(!e||e.t!=='L')return;const a=shape.V[e.a],b=shape.V[e.b];
   shape.V.push({x:(a.x+b.x)/2,y:(a.y+b.y)/2});E.splice(i+1,0,{t:'L',a:shape.V.length-1});relink(shape);sel={t:'v',i:E[i+1].a};updSel();drawShape()};
 $('eDel').onclick=()=>{if(!sel||shape.E.length<=3)return;const E=shape.E;
@@ -611,7 +639,7 @@ function makePdf(){const pr=profileCm(),P=pr.pts.map(([u,v])=>[u*10,v*10]),W=pr.
   return{pdf:out,pn}}
 $('xPdf').onclick=()=>{if(!shape)return;const{pdf,pn}=makePdf();dl('osta-ali-template-1to1.pdf',pdf,'application/pdf');
   $('pdfTxt').textContent=`کاغذ ${pn==='custom'?'سفارشی':pn} — موقع چاپ «Actual size / ۱۰۰٪» را بزن و خط‌کش ۱۰ سانتی پایین برگه را با خط‌کش واقعی چک کن.`};
-window.__pdf=makePdf;
+window.__pdf=makePdf;window.__ed=()=>({V:shape.V,vz,vox,voy,WW,WH});
 
 /* ---------- exports ---------- */
 let dlr=null;try{window.claude?.use('downloads').then(d=>dlr=d).catch(()=>{})}catch(e){}
