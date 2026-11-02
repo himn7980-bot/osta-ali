@@ -113,6 +113,7 @@ footer{text-align:center;font-size:11px;color:var(--mut);padding:18px 12px 26px}
 <section id="s5">
   <div class="card">
     <div class="row" style="margin-bottom:6px"><button id="gTabL" class="on">📱 گالری من</button><button id="gTabO">🌐 گالری آنلاین</button></div>
+    <div class="row" style="margin-bottom:6px;align-items:center"><button id="gLogin">ورود با Google</button><span id="gWho" class="hint" style="flex:1;text-align:center"></span></div>
     <label>نام شما (برای انتشار)<input id="gAuthor" type="text" maxlength="40" style="flex:1;font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px" placeholder="مثلاً اوستا علی — کربلا"></label>
     <label>دسته<select id="fType" style="font:inherit;padding:6px;border-radius:8px;border:1px solid var(--line)"></select></label>
     <label>عرض (سانتی‌متر)<input id="fW" type="number" min="0" step="0.5" placeholder="همه"></label>
@@ -721,13 +722,22 @@ function alertMsg(t){$('pdfTxt').textContent=t}
 const SB='https://kmpwxwghlqbjdcyrkdqf.supabase.co',SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttcHd4d2dobHFiamRjeXJrZHFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2MDk4MzcsImV4cCI6MjEwOTE4NTgzN30.l2aCTdt5Lv4X5SmL1pbPDlgjVjlC_DvEMtSJYG6FGsA';
 let gOnline=false,onlineRows=[];
 $('gAuthor').value=LS.get('author')||'';$('gAuthor').oninput=()=>LS.set('author',$('gAuthor').value.trim());
+function jwt(t){try{return JSON.parse(decodeURIComponent(escape(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')))))}catch(e){return{}}}
+function saveSess(at,rt,exp){const p=jwt(at),m=p.user_metadata||{},n={access_token:at,refresh_token:rt,exp:Date.now()/1000+(+exp||3600),uid:p.sub,google:!p.is_anonymous&&!!p.email,email:p.email||'',name:m.full_name||m.name||''};
+  try{localStorage.setItem('osta_sb',JSON.stringify(n))}catch(e){}return n}
+(function(){const h=new URLSearchParams(location.hash.slice(1));if(h.get('access_token')){const n=saveSess(h.get('access_token'),h.get('refresh_token'),h.get('expires_in'));
+  history.replaceState(null,'',location.pathname);if(n.name&&!LS.get('author'))LS.set('author',n.name);setTimeout(()=>{gOnline=true;go(5)},50)}
+  else if(h.get('error_description')){history.replaceState(null,'',location.pathname);setTimeout(()=>{go(5);$('gWho').textContent='ورود ناموفق: '+h.get('error_description')},50)}})();
+function updWho(){const s0=sess();$('gWho').textContent=s0&&s0.google?'✓ '+(s0.name||s0.email):'';$('gLogin').textContent=s0&&s0.google?'خروج':'ورود با Google'}
+$('gLogin').onclick=()=>{const s0=sess();if(s0&&s0.google){try{localStorage.removeItem('osta_sb')}catch(e){}updWho();renderGal();return}
+  location.href=SB+'/auth/v1/authorize?provider=google&redirect_to='+encodeURIComponent(location.origin+location.pathname)};
 function sess(){try{return JSON.parse(localStorage.getItem('osta_sb')||'null')}catch(e){return null}}
 async function sbAuth(){let s0=sess();const H={apikey:SK,'Content-Type':'application/json'};
   if(s0&&s0.exp>Date.now()/1000+60)return s0;
   let r;if(s0&&s0.refresh_token)r=await fetch(SB+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:H,body:JSON.stringify({refresh_token:s0.refresh_token})});
   if(!r||!r.ok)r=await fetch(SB+'/auth/v1/signup',{method:'POST',headers:H,body:JSON.stringify({})});
   const j=await r.json();if(!r.ok)throw new Error(/anonymous/i.test(JSON.stringify(j))?'ورود بدون ثبت‌نام در Supabase روشن نیست.':(j.msg||j.message||j.error_description||'خطای ورود'));
-  const n={access_token:j.access_token,refresh_token:j.refresh_token,exp:Date.now()/1000+(j.expires_in||3600),uid:j.user&&j.user.id};try{localStorage.setItem('osta_sb',JSON.stringify(n))}catch(e){}return n}
+  return saveSess(j.access_token,j.refresh_token,j.expires_in)}
 async function sbFetch(path,opt={},auth=false){const h={apikey:SK,Authorization:'Bearer '+SK,'Content-Type':'application/json',...(opt.headers||{})};
   if(auth){const s0=await sbAuth();h.Authorization='Bearer '+s0.access_token}
   const r=await fetch(SB+'/rest/v1/'+path,{...opt,headers:h});const t=await r.text();let j=null;try{j=t?JSON.parse(t):null}catch(e){}
@@ -741,7 +751,7 @@ function gCard(g,on){const mine=on&&sess()&&g.user_id===sess().uid;
   <div class="row" style="margin-top:4px"><button data-open="${g.id}">باز کردن</button>${!on?`<button data-pub="${g.id}" ${g.pub?'disabled':''}>${g.pub?'✓ منتشر شد':'🌐 انتشار'}</button><button data-del="${g.id}">حذف</button>`:mine?`<button data-odel="${g.id}">حذف</button>`:''}</div></div></div>`}
 const esc=t=>String(t||'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
 let gTmr;
-async function renderGal(){const ft=$('fType').value,fw=parseFloat($('fW').value),fh=parseFloat($('fH').value),T=.5;
+async function renderGal(){updWho();if(!$('gAuthor').value&&LS.get('author'))$('gAuthor').value=LS.get('author');const ft=$('fType').value,fw=parseFloat($('fW').value),fh=parseFloat($('fH').value),T=.5;
   $('gTabL').classList.toggle('on',!gOnline);$('gTabO').classList.toggle('on',gOnline);
   if(!gOnline){const a=gLoad().filter(g=>(!ft||g.type===ft)&&(isNaN(fw)||Math.abs(g.w-fw)<=T)&&(isNaN(fh)||Math.abs(g.h-fh)<=T));
     $('gList').innerHTML=a.length?a.map(g=>gCard(g,false)).join(''):'<p class="hint" style="text-align:center">موردی پیدا نشد. از مرحلهٔ «مقطع» با «💾 ذخیره در گالری» مقطع اضافه کن.</p>';return}
