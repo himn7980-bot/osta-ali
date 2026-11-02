@@ -129,8 +129,7 @@ footer{text-align:center;font-size:11px;color:var(--mut);padding:18px 12px 26px}
     <b style="font-size:14px">🧮 محاسبهٔ مصالح</b>
     <label>طول کل اجرا (متر)<input id="kL" type="number" min="0" step="0.1"></label>
     <label>درصد پرت (٪)<input id="kW" type="number" min="0" step="1" value="0"></label>
-    <label>پودر گچ برای هر لیتر حجم (کیلوگرم)<input id="kD" type="number" min="0" step="0.05" placeholder="وارد کن"></label>
-    <label>وزن هر کیسه (کیلوگرم)<input id="kB" type="number" min="0" step="1" placeholder="وارد کن"></label>
+    <label>وزن هر کیسه (کیلوگرم)<input id="kB" type="number" min="1" step="1" value="40"></label>
     <label>قیمت هر کیسه<input id="kP" type="number" min="0" step="1" placeholder="اختیاری"></label>
     <div class="stats">
       <div>حجم در هر متر<b id="kPerM">—</b></div>
@@ -140,7 +139,7 @@ footer{text-align:center;font-size:11px;color:var(--mut);padding:18px 12px 26px}
       <div>تعداد کیسه<b id="kBags">—</b></div>
       <div>هزینهٔ گچ<b id="kCost">—</b></div>
     </div>
-    <p class="hint" style="margin-bottom:0">طول کل خودکار از مدل پر می‌شود و قابل تغییر است. مقدار پودر گچ برای هر لیتر، و وزن کیسه را با تجربه یا مشخصات گچ مصرفی خودت وارد کن؛ حجم فقط از هندسهٔ مقطع حساب می‌شود.</p>
+    <p class="hint" style="margin-bottom:0">طول کل خودکار از مدل پر می‌شود و قابل تغییر است. مقادیر تقریبی است.</p>
     <div class="row" style="margin-top:8px"><button id="kReset">طول از مدل</button><button id="fitV">⤢ نمای پیش‌فرض سه‌بعدی</button></div>
   </div>
   <div class="card">
@@ -574,9 +573,9 @@ $('mS').onclick=()=>setMode('S');$('mC').onclick=()=>setMode('C');$('mA').onclic
 $('apos').onchange=()=>{needFit=true;syncUI();update3d()};
 let kArea=0,kLUser=false;
 const LS={get:k=>{try{return localStorage.getItem('osta_'+k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem('osta_'+k,v)}catch(e){}}};
-['kW','kD','kB','kP'].forEach(id=>{const v=LS.get(id);if(v!==null&&v!=='')$(id).value=v;$(id).oninput=()=>{LS.set(id,$(id).value);calc()}});
+['kW','kB','kP'].forEach(id=>{const v=LS.get(id);if(v!==null&&v!=='')$(id).value=v;$(id).oninput=()=>{LS.set(id,$(id).value);calc()}});
 $('kL').oninput=()=>{kLUser=true;calc()};$('kReset').onclick=()=>{kLUser=false;update3d()};$('fitV').onclick=()=>{needFit=true;update3d()};
-function calc(){const L=Math.max(0,+$('kL').value||0),w=Math.max(0,+$('kW').value||0)/100,perM=kArea/10,vol=perM*L*(1+w),d=+$('kD').value,bw=+$('kB').value,pr=+$('kP').value;
+function calc(){const L=Math.max(0,+$('kL').value||0),w=Math.max(0,+$('kW').value||0)/100,perM=kArea/10,vol=perM*L*(1+w),d=1.1,bw=+$('kB').value,pr=+$('kP').value;
   $('kPerM').textContent=`${fa(perM,2)} لیتر`;$('kVol').textContent=`${fa(vol,1)} لیتر`;
   if(d>0){const kg=vol*d;$('kKgM').textContent=`${fa(perM*d*(1+w),2)} kg`;$('kKg').textContent=`${fa(kg,1)} kg`;
     if(bw>0){const n=Math.ceil(kg/bw);$('kBags').textContent=`${fa(n,0)} کیسه`;$('kCost').textContent=pr>0?fa(n*pr,0):'—'}else{$('kBags').textContent='وزن کیسه؟';$('kCost').textContent='—'}}
