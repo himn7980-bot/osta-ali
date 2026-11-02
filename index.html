@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>اوستا علی — مقطع ابزار گچی به سه‌بعدی</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1f1d1a">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
@@ -693,5 +697,6 @@ $('xStl').onclick=()=>{if(!mesh)return;const p=mesh.geometry.attributes.position
   dl('osta-ali-model-mm.stl',b,'model/stl')};
 $('xPng').onclick=()=>{if(!renderer)return;renderer.render(scene,camera);renderer.domElement.toBlob(b=>dl('osta-ali-render.png',b,'image/png'))};
 </script>
+<script>if('serviceWorker' in navigator&&location.protocol==='https:'&&!location.host.includes('claude'))navigator.serviceWorker.register('sw.js').catch(()=>{})</script>
 </body>
 </html>

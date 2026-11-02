@@ -1,0 +1,47 @@
+name: Build Android APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['twa/**', '.github/workflows/apk.yml']
+permissions:
+  contents: write
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '20'}
+      - name: Install Bubblewrap
+        run: npm i -g @bubblewrap/cli
+      - name: Configure
+        run: |
+          mkdir -p ~/.bubblewrap
+          echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > ~/.bubblewrap/config.json
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+      - name: Build
+        working-directory: twa
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ostaali-test
+          BUBBLEWRAP_KEY_PASSWORD: ostaali-test
+        run: |
+          sed -i "s/\"appVersionCode\": 1,/\"appVersionCode\": ${{ github.run_number }},/" twa-manifest.json
+          keytool -genkeypair -v -keystore android.keystore -alias android -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass ostaali-test -keypass ostaali-test -dname "CN=ArchTverse, O=ArchTverse, C=IQ"
+          bubblewrap update --skipVersionUpgrade
+          bubblewrap build --skipPwaValidation
+          ls -la
+          cp app-release-signed.apk ../osta-ali.apk
+          cp app-release-bundle.aab ../osta-ali.aab || true
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-${{ github.run_number }}
+          name: "اوستا علی — APK ${{ github.run_number }}"
+          body: "نسخهٔ تست اندروید. برای نصب، فایل osta-ali.apk را دانلود و باز کن."
+          files: |
+            osta-ali.apk
+            osta-ali.aab
