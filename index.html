@@ -58,6 +58,7 @@ footer{text-align:center;font-size:11px;color:var(--mut);padding:18px 12px 26px}
   <button id="st2" disabled>۲. کادر</button>
   <button id="st3" disabled>۳. مقطع</button>
   <button id="st4" disabled>۴. سه‌بعدی</button>
+  <button id="st5">🗂 گالری</button>
 </div>
 
 <section id="s1" class="show">
@@ -95,15 +96,33 @@ footer{text-align:center;font-size:11px;color:var(--mut);padding:18px 12px 26px}
     <label>صاف کردن خطوط افقی و عمودی (۹۰°)<input id="snap" type="checkbox" checked></label>
     <label>اصلاح بیشتر: ۴۵° و قوس دقیق (آزمایشی)<input id="adv" type="checkbox"></label>
     <div class="row" style="margin:6px 0"><button id="rot">⟳ چرخش ۹۰°</button><button id="mir">⇋ قرینه</button></div>
+    <label>نوع ابزار<select id="ptype" style="font:inherit;padding:6px;border-radius:8px;border:1px solid var(--line)"><option value="ceil">ابزار سقفی / گلویی</option><option value="floor">قرنیز کف</option></select></label>
+    <div class="row" style="margin-bottom:8px"><button id="gSave">💾 ذخیره در گالری</button></div>
+    <div id="gForm" class="card" style="display:none;background:var(--bg)">
+      <label>نام<input id="gName" type="text" style="flex:1;font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px" placeholder="مثلاً گلویی سالن"></label>
+      <label>دسته<select id="gType" style="font:inherit;padding:6px;border-radius:8px;border:1px solid var(--line)"></select></label>
+      <div class="row"><button id="gCancel">انصراف</button><button id="gOk" class="pri">ذخیره</button></div>
+    </div>
     <div class="row" style="margin-bottom:8px"><button id="xPdf">📄 شابلون چاپی ۱:۱ (PDF — A4 / A3 خودکار)</button></div>
     <div id="pdfTxt" class="hint" style="text-align:center"></div>
     <div class="row"><button id="redo">تشخیص دوباره</button><button id="toS4" class="pri">ساخت سه‌بعدی</button></div>
   </div>
 </section>
 
+<section id="s5">
+  <div class="card">
+    <b style="font-size:14px">🗂 گالری من (روی همین گوشی)</b>
+    <label>دسته<select id="fType" style="font:inherit;padding:6px;border-radius:8px;border:1px solid var(--line)"></select></label>
+    <label>عرض (سانتی‌متر)<input id="fW" type="number" min="0" step="0.5" placeholder="همه"></label>
+    <label>ارتفاع (سانتی‌متر)<input id="fH" type="number" min="0" step="0.5" placeholder="همه"></label>
+    <p class="hint" style="margin:0">اندازه‌ها با ±۰٫۵ سانت مقایسه می‌شوند. گالری آنلاین مشترک به‌زودی.</p>
+  </div>
+  <div id="gList"></div>
+</section>
+
 <section id="s4">
   <div class="row" style="margin-bottom:10px">
-    <button id="mS" class="on">خط صاف</button><button id="mC">تقاطع ۹۰°</button><button id="mA">قوس / دایره</button><button id="mF">قاب دیواری</button>
+    <button id="mS" class="on">خط صاف</button><button id="mC">تقاطع ۹۰°</button><button id="mA">قوس / دایره</button><button id="mF">قاب دیواری</button><button id="mB">قرنیز کف</button>
   </div>
   <div id="view3d"></div>
   <div class="card">
@@ -115,6 +134,7 @@ footer{text-align:center;font-size:11px;color:var(--mut);padding:18px 12px 26px}
     <label>خطوط لبه (نمایش پله‌ها و کنج‌ها)<input id="cEdge" type="checkbox" checked></label>
     <label>سایه<input id="cShad" type="checkbox" checked></label>
     <label>دیوار<input id="cWall" type="checkbox" checked></label>
+    <label id="lFloor" hidden>کف<input id="cFloor" type="checkbox" checked></label>
     <label id="lCeil">سقف<input id="cCeil" type="checkbox" checked></label>
     <label id="lLight">نور مخفی<input id="cLight" type="checkbox" checked></label>
     <label id="lGap">فاصلهٔ ابزار تا سقف (سانتی‌متر)<input id="gapC" type="number" value="8" min="0" step="1"></label>
@@ -176,7 +196,7 @@ footer{text-align:center;font-size:11px;color:var(--mut);padding:18px 12px 26px}
     <button id="xrUndo">↶ برگشت</button><button id="xrEdge">⇅ لبه</button><button id="xrFlip">↕ برعکس</button><button id="xrExit" class="pri">خروج</button></div>
 </div>
 <div id="extBox" class="card" style="display:none;margin:0 12px 10px;border-color:#b5652b"><p class="hint" style="margin:0">داخل اپ Claude دوربین، گالری و AR مسدود است. برای کار کامل، اپ را در مرورگر گوشی باز کن:<br><a id="extLink" href="#" style="color:#b5652b;font-weight:600" dir="ltr"></a></p></div>
-<footer>ساخته‌شده توسط ArchTverse — واتساپ / تماس: <span dir="ltr">07773944470</span></footer>
+<footer>ساخته‌شده توسط ArchTverse — <a href="https://wa.me/989157105322" style="color:inherit">واتساپ</a> / <a href="tel:+989157105322" style="color:inherit">تماس</a>: <span dir="ltr">+98 915 710 5322</span></footer>
 
 <script type="importmap">
 {"imports":{"three":"./three.module.js"}}
@@ -190,9 +210,9 @@ let srcCanvas=null,srcGray=null,SW=0,SH=0,corners=null;
 let autoOri=false,warped=null,WW=0,WH=0,bgCanvas=null,shape=null,mode='S';
 
 /* ---------- navigation ---------- */
-function go(n){for(let i=1;i<=4;i++){$('s'+i).classList.toggle('show',i===n);$('st'+i).classList.toggle('on',i===n)}
+function go(n){for(let i=1;i<=5;i++){$('s'+i).classList.toggle('show',i===n);$('st'+i).classList.toggle('on',i===n)}if(n===5)renderGal();
   if(n===2)drawCrop();if(n===3)drawShape();if(n===4)update3d();scrollTo(0,0)}
-for(let i=1;i<=4;i++)$('st'+i).onclick=()=>go(i);
+for(let i=1;i<=5;i++)$('st'+i).onclick=()=>go(i);
 const enable=n=>{for(let i=2;i<=n;i++)$('st'+i).disabled=false};
 
 /* ---------- load image ---------- */
@@ -407,8 +427,8 @@ const cv3=$('cv3');
 function drawShape(){if(!bgCanvas)return;cv3.width=WW;cv3.height=WH;const x=cv3.getContext('2d'),s=scl(cv3)/vz;x.setTransform(vz,0,0,vz,-vox*vz,-voy*vz);
   x.globalAlpha=.4;x.drawImage(bgCanvas,0,0);x.globalAlpha=1;if(!shape){$('dims').textContent='';return}
   const P=samplePoly();let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const[a,b]of P){x0=Math.min(x0,a);x1=Math.max(x1,a);y0=Math.min(y0,b);y1=Math.max(y1,b)}
-  x.lineWidth=5*s;x.strokeStyle='#3b6fb5';x.beginPath();x.moveTo(x0-4*s,y1+20*s);x.lineTo(x0-4*s,y0-4*s);x.lineTo(x1+20*s,y0-4*s);x.stroke();
-  x.fillStyle='#3b6fb5';x.font=`${13*s}px Tahoma`;x.textAlign='center';x.fillText('دیوار',x0-14*s,y1+34*s);x.fillText('سقف',x1+8*s,y0-12*s);
+  x.lineWidth=5*s;x.strokeStyle='#3b6fb5';x.beginPath();if($('ptype').value==='floor'){x.moveTo(x0-4*s,y0-20*s);x.lineTo(x0-4*s,y1+4*s);x.lineTo(x1+20*s,y1+4*s)}else{x.moveTo(x0-4*s,y1+20*s);x.lineTo(x0-4*s,y0-4*s);x.lineTo(x1+20*s,y0-4*s)}x.stroke();
+  x.fillStyle='#3b6fb5';x.font=`${13*s}px Tahoma`;x.textAlign='center';if($('ptype').value==='floor'){x.fillText('دیوار',x0-14*s,y0-26*s);x.fillText('کف',x1+8*s,y1+20*s)}else{x.fillText('دیوار',x0-14*s,y1+34*s);x.fillText('سقف',x1+8*s,y0-12*s)}
   x.beginPath();P.forEach((p,i)=>i?x.lineTo(...p):x.moveTo(...p));x.closePath();
   x.fillStyle='rgba(181,101,43,.16)';x.fill();x.lineWidth=2.2*s;x.strokeStyle='#b5652b';x.lineJoin='round';x.stroke();
   if(sel&&sel.t==='e'&&shape.E[sel.i]){const Q=ePts(shape.E[sel.i]);x.beginPath();Q.forEach((p,i)=>i?x.lineTo(...p):x.moveTo(...p));x.lineWidth=7*s;x.strokeStyle='rgba(224,123,0,.85)';x.stroke()}
@@ -474,7 +494,8 @@ let tmr;const redet=()=>{clearTimeout(tmr);tmr=setTimeout(detect,180)};
 ['sens','gap','eps','snap','adv'].forEach(id=>$(id).oninput=redet);
 $('hcm').oninput=()=>drawShape();$('rot').onclick=()=>xform(true);$('mir').onclick=()=>xform(false);
 $('redo').onclick=detect;
-$('toS4').onclick=()=>{if(!shape)return;enable(4);go(4)};
+$('toS4').onclick=()=>{if(!shape)return;enable(4);const fl=$('ptype').value==='floor';if(fl&&mode!=='B')setMode('B');else if(!fl&&mode==='B')setMode('S');go(4)};
+$('ptype').onchange=()=>drawShape();
 const fa=(v,d=1)=>(+v).toLocaleString('fa-IR',{maximumFractionDigits:d});
 
 function profileCm(){const P=samplePoly();let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
@@ -517,7 +538,7 @@ function sweep(prof,path,closed,cu=0,cols=null,openP=false){const n=path.length,
   g=g.toNonIndexed();g.computeVertexNormals();return{g,clen,sn,n0f}}
 
 function buildPath(){const inv=$('inv').checked,L=Math.max(1,+$('len').value||1);
-  if(mode==='S')return{path:[[0,0],[L,0]],closed:false};
+  if(mode==='S'||mode==='B')return{path:[[0,0],[L,0]],closed:false};
   if(mode==='C')return{path:inv?[[0,L],[0,0],[L,0]]:[[L,0],[0,0],[0,L]],closed:false};
   if(mode==='F'){const H=Math.max(5,+$('fh').value||5);return{path:[[0,0],[0,H],[L,H],[L,0]],closed:true}}
   const R=Math.max(1,+$('rad').value||1),A=Math.min(360,Math.max(5,+$('ang').value||360)),full=A>=359.9;
@@ -530,7 +551,7 @@ async function update3d(){if(!shape)return;await libs;if(!THREE){$('sDim').textC
   const pr=profileCm(),{path,closed}=buildPath(),F=mode==='F',mid=isMid(),sw=F&&$('inv').checked;
   const prof=sw?pr.pts.map(([u,v])=>[v,u]).reverse():pr.pts,{g,clen,sn,n0f}=sweep(prof,path,closed,sw?pr.h/2:pr.cu);
   if(group){scene.remove(group);group.traverse(o=>o.geometry&&o.geometry.dispose())}group=new THREE.Group();scene.add(group);
-  const mc=MC[mcol],h=pr.h,w=pr.w,DS=THREE.DoubleSide,on=!F&&$('cLight').checked,H=h+Math.max(0,+$('gapC').value||0);
+  const mc=MC[mcol],h=pr.h,w=pr.w,DS=THREE.DoubleSide,on=!F&&mode!=='B'&&$('cLight').checked,H=h+Math.max(0,+$('gapC').value||0);
   const wallM=new THREE.MeshStandardMaterial({color:WC[wcol],roughness:.95,side:DS}),ceilM=new THREE.MeshStandardMaterial({color:0xf2f0ec,emissive:0x6a6660,roughness:.95,side:DS});
   mesh=new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:mc[0],metalness:mc[1],roughness:mc[2],flatShading:true,side:DS}));group.add(mesh);
   const shd=$('cShad').checked;mesh.castShadow=mesh.receiveShadow=shd;
@@ -543,9 +564,11 @@ async function update3d(){if(!shape)return;await libs;if(!THREE){$('sDim').textC
     const t=new THREE.Vector3(L/2,90+FH/2,0),D=Math.hypot(L,FH)*.62/Math.sin(19*Math.PI/180)/Math.min(1,camera.aspect);
     controls.target.copy(t);camera.position.set(t.x+D*.3,t.y-D*.08,D*.95);camera.near=D/200;camera.far=D*40;camera.updateProjectionMatrix()}
   else{
-    if($('cWall').checked)add(sweep(mid?[[-3,h],[0,h],[0,H],[-3,H]]:[[-3,-200],[0,-200],[0,H],[-3,H]],path,closed).g,wallM);
+    const BB=mode==='B';
+    if($('cWall').checked)add(sweep(BB?[[-3,0],[0,0],[0,260],[-3,260]]:mid?[[-3,h],[0,h],[0,H],[-3,H]]:[[-3,-200],[0,-200],[0,H],[-3,H]],path,closed).g,wallM);
+    if(BB&&$('cFloor').checked)add(sweep([[-3,0],[w+160,0],[w+160,-3],[-3,-3]],path,closed).g,new THREE.MeshStandardMaterial({color:0xb9ab97,roughness:.8,side:DS}));
     if(mid)add(sweep([[-160,h],[0,h],[0,h+3],[-160,h+3]],path,closed).g,ceilM);
-    if($('cCeil').checked){if(mid){const R=+$('rad').value,c=add(new THREE.CircleGeometry(R+1,96),ceilM);c.rotation.x=Math.PI/2;c.position.y=H}
+    if($('cCeil').checked&&!BB){if(mid){const R=+$('rad').value,c=add(new THREE.CircleGeometry(R+1,96),ceilM);c.rotation.x=Math.PI/2;c.position.y=H}
       else add(sweep([[-3,H],[w+120,H],[w+120,H+3],[-3,H+3]],path,closed).g,ceilM)}
     if(on){const lc=new THREE.Color(LC[lcol]),k=f=>lc.clone().multiplyScalar(f),gm=new THREE.MeshBasicMaterial({vertexColors:true,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,side:DS});
       add(sweep([[1.5,h+.6],[2.6,h+.6],[2.6,h+1.4],[1.5,h+1.4]],path,closed).g,new THREE.MeshBasicMaterial({color:k(1.6)}));
@@ -557,7 +580,7 @@ async function update3d(){if(!shape)return;await libs;if(!THREE){$('sDim').textC
     const L=Math.hypot(...rd);rd=[rd[0]/L,rd[1]/L];const D=rad*1.15/Math.sin(19*Math.PI/180)/Math.min(1,camera.aspect),R=+$('rad').value;
     if(mid){tg=new THREE.Vector3(0,h,0);controls.target.copy(tg);camera.position.set(0,h-R*1.25,R*2.7)}
     else{controls.target.copy(tg);if(closed&&!$('inv').checked)camera.position.set(tg.x+rd[0]*R*1.55,tg.y-R*.45,tg.z+rd[1]*R*1.55);
-      else camera.position.set(tg.x+(rd[0]*.8-rd[1]*.45)*D,tg.y-D*.32,tg.z+(rd[1]*.8+rd[0]*.45)*D)}
+      else camera.position.set(tg.x+(rd[0]*.8-rd[1]*.45)*D,tg.y+(BB?D*.38:-D*.32),tg.z+(rd[1]*.8+rd[0]*.45)*D)}
     camera.near=Math.max(D,R)/200;camera.far=Math.max(D,R)*40;camera.updateProjectionMatrix()}
   if(keep){camera.position.copy(keep.p);controls.target.copy(keep.t);camera.near=keep.n;camera.far=keep.f;camera.updateProjectionMatrix()}
   {sun.castShadow=$('cShad').checked;if(!sun.target.parent)scene.add(sun.target);const sp=new THREE.Box3().setFromObject(mesh).getBoundingSphere(new THREE.Sphere()),R=Math.max(5,sp.radius);
@@ -567,13 +590,13 @@ async function update3d(){if(!shape)return;await libs;if(!THREE){$('sDim').textC
   $('sDim').textContent=`${fa(pr.w)} × ${fa(pr.h)} cm`;$('sArea').textContent=`${fa(pr.area)} cm²`;
   $('sLen').textContent=`${fa(clen/100,2)} m`;$('sVol').textContent=`${fa(pr.area*clen/1000)} لیتر`;kArea=pr.area;if(!kLUser)$('kL').value=(clen/100).toFixed(2);calc()}
 
-function setMode(m){mode=m;needFit=true;['S','C','A','F'].forEach(k=>$('m'+k).classList.toggle('on',k===m));syncUI();update3d()}
+function setMode(m){mode=m;needFit=true;['S','C','A','F','B'].forEach(k=>$('m'+k).classList.toggle('on',k===m));syncUI();update3d()}
 function syncUI(){const m=mode,mid=isMid();
   $('lLen').hidden=m==='A';$('lRad').hidden=$('lAng').hidden=$('lPos').hidden=m!=='A';$('lFh').hidden=m!=='F';
-  $('lInv').hidden=m==='S'||mid;$('xrRow').style.display=(m==='S'||m==='F')?'flex':'none';$('lCeil').hidden=$('lLight').hidden=$('lGap').hidden=m==='F';
+  $('lInv').hidden=m==='S'||m==='B'||mid;$('xrRow').style.display=(m==='S'||m==='F'||m==='B')?'flex':'none';$('lCeil').hidden=$('lLight').hidden=$('lGap').hidden=m==='F'||m==='B';$('lFloor').hidden=m!=='B';
   $('lenTxt').textContent=m==='F'?'عرض قاب (سانتی‌متر)':'طول هر شاخه (سانتی‌متر)';
   $('invTxt').textContent={C:'گوشهٔ بیرونی (دور ستون)',A:'ابزار بیرون قوس (دور ستون گرد)',F:'چرخاندن مقطع ۹۰°'}[m]||''}
-$('mS').onclick=()=>setMode('S');$('mC').onclick=()=>setMode('C');$('mA').onclick=()=>setMode('A');$('mF').onclick=()=>setMode('F');
+$('mS').onclick=()=>setMode('S');$('mC').onclick=()=>setMode('C');$('mA').onclick=()=>setMode('A');$('mF').onclick=()=>setMode('F');$('mB').onclick=()=>setMode('B');
 $('apos').onchange=()=>{needFit=true;syncUI();update3d()};
 let kArea=0,kLUser=false;
 const LS={get:k=>{try{return localStorage.getItem('osta_'+k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem('osta_'+k,v)}catch(e){}}};
@@ -584,7 +607,7 @@ function calc(){const L=Math.max(0,+$('kL').value||0),w=Math.max(0,+$('kW').valu
   if(d>0){const kg=vol*d;$('kKgM').textContent=`${fa(perM*d*(1+w),2)} kg`;$('kKg').textContent=`${fa(kg,1)} kg`;
     if(bw>0){const n=Math.ceil(kg/bw);$('kBags').textContent=`${fa(n,0)} کیسه`;$('kCost').textContent=pr>0?fa(n*pr,0):'—'}else{$('kBags').textContent='وزن کیسه؟';$('kCost').textContent='—'}}
   else{$('kKgM').textContent=$('kKg').textContent='مقدار پودر؟';$('kBags').textContent=$('kCost').textContent='—'}}
-['len','rad','ang','inv','cWall','cCeil','cLight','gapC','fh','cEdge','cShad'].forEach(id=>$(id).oninput=update3d);setMode('S');
+['len','rad','ang','inv','cWall','cCeil','cLight','gapC','fh','cEdge','cShad','cFloor'].forEach(id=>$(id).oninput=update3d);setMode('S');
 
 /* ---------- AR ---------- */
 const EXT='';
@@ -594,14 +617,14 @@ let arP=null,GLTFE=null,arT=null;
 function arGeo(){const pr=profileCm(),k=arP.k/100;let prof=pr.pts.map(([u,v])=>[u*k,v*k]);
   if(mode==='F'&&$('inv').checked)prof=prof.map(([u,v])=>[v,u]).reverse();
   const L=arP.L,H=arP.H;let path,closed=false;
-  if(mode==='S')path=[[0,0],[L,0]];else if(mode==='C')path=$('inv').checked?[[0,L],[0,0],[L,0]]:[[L,0],[0,0],[0,L]];
+  if(mode==='S'||mode==='B')path=[[0,0],[L,0]];else if(mode==='C')path=$('inv').checked?[[0,L],[0,0],[L,0]]:[[L,0],[0,0],[0,L]];
   else if(mode==='F'){path=[[0,0],[0,H],[L,H],[L,0]];closed=true}else({path,closed}=buildPath());
   return{g:sweep(prof,path,closed).g,w:pr.w*k,h:pr.h*k}}
 function arLabels(){const pr=profileCm(),k=arP.k/100;$('arLv').textContent=fa(arP.L,0)+' cm';$('arHv').textContent=fa(arP.H,0)+' cm';
   $('arKv').textContent=`${fa(arP.k,0)}٪ — ${fa(pr.w*k)}×${fa(pr.h*k)} cm`}
 async function arBuild(){const{g}=arGeo(),mt=mesh.material,sc=new THREE.Scene(),hold=new THREE.Group(),
     m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:mt.color,metalness:mt.metalness,roughness:mt.roughness,side:THREE.DoubleSide}));
-  if(mode==='F')m.rotation.x=Math.PI/2;if(mode==='S')hold.rotation.y=Math.PI;
+  if(mode==='F')m.rotation.x=Math.PI/2;if(mode==='S'||mode==='B')hold.rotation.y=Math.PI;
   hold.add(m);hold.scale.setScalar(.01);sc.add(hold);sc.updateMatrixWorld(true);
   const c=new THREE.Box3().setFromObject(hold).getCenter(new THREE.Vector3());hold.position.sub(c);
   const glb=await new Promise((res,rej)=>new GLTFE().parse(sc,res,rej,{binary:true}));g.dispose();
@@ -616,7 +639,7 @@ $('arBtn').onclick=async()=>{if(!mesh)return;const b=$('arBtn');b.disabled=true;
     ['oY','oP','oR'].forEach(id=>$(id).value=0);orient();$('arL').value=arP.L;$('arH').value=arP.H;$('arK').value=100;
     $('arLL').style.display=mode==='A'?'none':'flex';$('arHL').style.display=mode==='F'?'flex':'none';
     $('arLt').textContent=mode==='F'?'عرض قاب':mode==='C'?'طول هر شاخه':'طول';arLabels();
-    await arBuild();const mv=$('mv'),wall=mode==='S'||mode==='F';mv.setAttribute('ar-placement',wall?'wall':'floor');
+    await arBuild();const mv=$('mv'),wall=mode==='S'||mode==='F'||mode==='B';mv.setAttribute('ar-placement',wall?'wall':'floor');
     $('arBox').style.display='flex';
     $('arHint').textContent=(wall?'گوشی را رو به دیوار بگیر و آرام حرکت بده تا دیوار شناسایی شود. ':'گوشی را رو به کف بگیر و آرام حرکت بده تا سطح شناسایی شود. ')+'اندازه‌ها واقعی (۱:۱) است؛ طول و مقطع را با اسلایدرهای بالا جدا تنظیم کن.';
     mv.addEventListener('load',()=>{if(!mv.canActivateAR)$('arHint').textContent='AR در این مرورگر فعال نیست. در Chrome اندروید یا Safari آیفون باز کن. (داخل اپ Claude کار نمی‌کند.)'},{once:true})
@@ -634,8 +657,8 @@ $('xrBtn').onclick=async()=>{const msg=t=>{$('arHint').textContent=t};
   const sc=new THREE.Scene(),cam=new THREE.PerspectiveCamera();sc.add(new THREE.HemisphereLight(0xffffff,0x777777,2.4));const dl=new THREE.DirectionalLight(0xffffff,1.6);dl.position.set(.4,1,.6);sc.add(dl);
   const ret=new THREE.Mesh(new THREE.RingGeometry(.025,.035,32).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xffa030}));ret.matrixAutoUpdate=false;ret.visible=false;sc.add(ret);
   const ref=r.xr.getReferenceSpace(),vs=await session.requestReferenceSpace('viewer'),hts=await session.requestHitTestSource({space:vs,entityTypes:['plane','point']}).catch(()=>session.requestHitTestSource({space:vs}));let seen=0,lastHit=0;
-  const pts=[],marks=[],mt=mesh.material;let model=null,top=true,flip=false;
-  const steps=F?['گوشهٔ بالا-چپ قاب را روی دیوار بزن','گوشهٔ پایین-راست قاب را بزن']:['ابتدای لبهٔ بالای ابزار را روی دیوار بزن','انتهای لبهٔ بالای ابزار را بزن'];
+  const pts=[],marks=[],mt=mesh.material;let model=null,top=mode!=='B',flip=false;
+  const steps=mode==='B'?['ابتدای لبهٔ پایین قرنیز را (کنج دیوار و کف) بزن','انتهای لبهٔ پایین قرنیز را بزن']:F?['گوشهٔ بالا-چپ قاب را روی دیوار بزن','گوشهٔ پایین-راست قاب را بزن']:['ابتدای لبهٔ بالای ابزار را روی دیوار بزن','انتهای لبهٔ بالای ابزار را بزن'];
   const say=(x)=>{$('xrMsg').textContent=x||(pts.length<2?`${pts.length+1}) ${steps[pts.length]}. `+(ret.visible?'حلقه روی سطح است — حالا روی صفحه بزن.':'حلقهٔ نارنجی هنوز پیدا نشده: یک قدم عقب برو و گوشی را آرام چپ و راست حرکت بده تا دیوار شناسایی شود.'):'جا افتاد ✓ — «⇅ لبه»: نقطه‌ها لبهٔ بالا یا پایین ابزار باشند. «↕ برعکس»: مقطع وارونه شود.')};say();
   function place(){if(model){sc.remove(model);model.geometry.dispose();model=null}if(pts.length<2)return;
     const camP=new THREE.Vector3().setFromMatrixPosition(r.xr.getCamera().matrixWorld);let[A,B]=[pts[0].p,pts[1].p];
@@ -671,7 +694,7 @@ function makePdf(){const pr=profileCm(),P=pr.pts.map(([u,v])=>[u*10,v*10]),W=pr.
   c+='0.4 w\n'+Ln(x0,y0-D+4,x0+W,y0-D+4)+Ln(x0,y0-D+2,x0,y0-D+6)+Ln(x0+W,y0-D+2,x0+W,y0-D+6)+T(x0+W/2-8,y0-D+6,8,`${W.toFixed(1)} mm`);
   c+=Ln(x0-D+4,y0,x0-D+4,y0+H)+Ln(x0-D+2,y0,x0-D+6,y0)+Ln(x0-D+2,y0+H,x0-D+6,y0+H)+`BT /F1 8 Tf 0 1 -1 0 ${f(x0-D+3)} ${f(y0+H/2-8)} Tm (${H.toFixed(1)} mm) Tj ET\n`;
   const bar=PW-2*M>=110?100:50,by=M+6;c+='1.2 w\n'+Ln(M,by,M+bar,by)+'0.4 w\n';for(let i=0;i<=bar;i+=10)c+=Ln(M+i,by,M+i,by+(i%50?2:4));
-  c+=T(M,by-4.5,7,`${bar} mm - check with a ruler before cutting`)+T(M,M+INFO-6,10,'Osta Ali - profile template  SCALE 1:1')+T(M,M+INFO-11,8,`Section ${W.toFixed(1)} x ${H.toFixed(1)} mm  |  Paper ${pn} ${PW}x${PH} mm  |  Print at 100% / Actual size`)+T(M,M+INFO-15.5,7,'Dashed lines = wall (left) and ceiling (top) reference.')+T(PW-M-58,M+1,6,'ArchTverse  +964 7773944470');
+  c+=T(M,by-4.5,7,`${bar} mm - check with a ruler before cutting`)+T(M,M+INFO-6,10,'Osta Ali - profile template  SCALE 1:1')+T(M,M+INFO-11,8,`Section ${W.toFixed(1)} x ${H.toFixed(1)} mm  |  Paper ${pn} ${PW}x${PH} mm  |  Print at 100% / Actual size`)+T(M,M+INFO-15.5,7,'Dashed lines = wall (left) and ceiling (top) reference.')+T(PW-M-58,M+1,6,'ArchTverse  +98 915 710 5322');
   const objs=['<< /Type /Catalog /Pages 2 0 R >>','<< /Type /Pages /Kids [3 0 R] /Count 1 >>',`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${f(PW)} ${f(PH)}] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>`,
     `<< /Length ${c.length} >>\nstream\n${c}endstream`,'<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'];
   let out='%PDF-1.4\n';const off=[];objs.forEach((o,i)=>{off.push(out.length);out+=`${i+1} 0 obj\n${o}\nendobj\n`});
@@ -680,6 +703,27 @@ function makePdf(){const pr=profileCm(),P=pr.pts.map(([u,v])=>[u*10,v*10]),W=pr.
 $('xPdf').onclick=()=>{if(!shape)return;const{pdf,pn}=makePdf();dl('osta-ali-template-1to1.pdf',pdf,'application/pdf');
   $('pdfTxt').textContent=`کاغذ ${pn==='custom'?'سفارشی':pn} — موقع چاپ «Actual size / ۱۰۰٪» را بزن و خط‌کش ۱۰ سانتی پایین برگه را با خط‌کش واقعی چک کن.`};
 window.__pdf=makePdf;window.__ed=()=>({V:shape.V,vz,vox,voy,WW,WH});
+
+/* ---------- local gallery ---------- */
+const GT=['گلویی','قرنیز سقفی','قرنیز کف','قاب','ابزار دیواری','سایر'];
+$('gType').innerHTML=GT.map(t=>`<option>${t}</option>`).join('');$('fType').innerHTML='<option value="">همه</option>'+GT.map(t=>`<option>${t}</option>`).join('');
+const gLoad=()=>{try{return JSON.parse(localStorage.getItem('osta_gallery')||'[]')}catch(e){return[]}},gStore=a=>{try{localStorage.setItem('osta_gallery',JSON.stringify(a));return true}catch(e){return false}};
+function thumb(pts,w,h){const k=90/Math.max(w,h),W=w*k,H=h*k;return `<svg viewBox="-4 -4 ${W+8} ${H+8}" width="96" height="96"><path d="M0 -3V${H+3}M-3 0H${W+3}" stroke="#3b6fb5" stroke-width="2"/><polygon points="${pts.map(([u,v])=>`${(u*k).toFixed(1)},${((h-v)*k).toFixed(1)}`).join(' ')}" fill="#b5652b22" stroke="#b5652b" stroke-width="1.6"/></svg>`}
+$('gSave').onclick=()=>{if(!shape)return;$('gForm').style.display='block';$('gType').value=$('ptype').value==='floor'?'قرنیز کف':'گلویی';$('gName').focus()};
+$('gCancel').onclick=()=>$('gForm').style.display='none';
+$('gOk').onclick=()=>{const pr=profileCm(),a=gLoad();
+  a.unshift({id:Date.now(),name:$('gName').value.trim()||'بدون نام',type:$('gType').value,w:+pr.w.toFixed(1),h:+pr.h.toFixed(1),hcm:+$('hcm').value,ptype:$('ptype').value,WW,WH,shape:JSON.parse(JSON.stringify(shape)),pts:pr.pts.map(([u,v])=>[+u.toFixed(2),+v.toFixed(2)]),date:new Date().toISOString().slice(0,10)});
+  if(!gStore(a)){alertMsg('حافظه پر است؛ چند مورد قدیمی را حذف کن.');return}$('gForm').style.display='none';$('gName').value='';$('pdfTxt').textContent='✓ در گالری ذخیره شد.'};
+function alertMsg(t){$('pdfTxt').textContent=t}
+function renderGal(){const ft=$('fType').value,fw=parseFloat($('fW').value),fh=parseFloat($('fH').value),T=.5;
+  const a=gLoad().filter(g=>(!ft||g.type===ft)&&(isNaN(fw)||Math.abs(g.w-fw)<=T)&&(isNaN(fh)||Math.abs(g.h-fh)<=T));
+  $('gList').innerHTML=a.length?a.map(g=>`<div class="card" style="display:flex;gap:12px;align-items:center">${thumb(g.pts,g.w,g.h)}<div style="flex:1;font-size:13px;line-height:1.9"><b>${g.name.replace(/</g,'&lt;')}</b><br>${g.type} — ${fa(g.w)} × ${fa(g.h)} cm<br><span class="hint">${g.date}</span>
+    <div class="row" style="margin-top:4px"><button data-open="${g.id}">باز کردن</button><button data-del="${g.id}">حذف</button></div></div></div>`).join(''):'<p class="hint" style="text-align:center">موردی پیدا نشد. از مرحلهٔ «مقطع» با «💾 ذخیره در گالری» مقطع اضافه کن.</p>'}
+['fType','fW','fH'].forEach(id=>$(id).oninput=renderGal);
+$('gList').onclick=e=>{const o=e.target.dataset.open,d=e.target.dataset.del;
+  if(d){gStore(gLoad().filter(g=>g.id!=d));renderGal();return}
+  if(o){const g=gLoad().find(g=>g.id==o);if(!g)return;shape=JSON.parse(JSON.stringify(g.shape));WW=g.WW;WH=g.WH;warped=new Uint8Array(WW*WH).fill(255);makeBg();
+    $('hcm').value=g.hcm;$('ptype').value=g.ptype||'ceil';sel=null;vz=1;vox=voy=0;enable(4);go(3)}};
 
 /* ---------- exports ---------- */
 let dlr=null;try{window.claude?.use('downloads').then(d=>dlr=d).catch(()=>{})}catch(e){}
