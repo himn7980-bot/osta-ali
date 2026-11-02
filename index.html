@@ -126,6 +126,24 @@ footer{text-align:center;font-size:11px;color:var(--mut);padding:18px 12px 26px}
     </div>
   </div>
   <div class="card">
+    <b style="font-size:14px">🧮 محاسبهٔ مصالح</b>
+    <label>طول کل اجرا (متر)<input id="kL" type="number" min="0" step="0.1"></label>
+    <label>درصد پرت (٪)<input id="kW" type="number" min="0" step="1" value="0"></label>
+    <label>پودر گچ برای هر لیتر حجم (کیلوگرم)<input id="kD" type="number" min="0" step="0.05" placeholder="وارد کن"></label>
+    <label>وزن هر کیسه (کیلوگرم)<input id="kB" type="number" min="0" step="1" placeholder="وارد کن"></label>
+    <label>قیمت هر کیسه<input id="kP" type="number" min="0" step="1" placeholder="اختیاری"></label>
+    <div class="stats">
+      <div>حجم در هر متر<b id="kPerM">—</b></div>
+      <div>حجم کل<b id="kVol">—</b></div>
+      <div>گچ در هر متر<b id="kKgM">—</b></div>
+      <div>گچ کل<b id="kKg">—</b></div>
+      <div>تعداد کیسه<b id="kBags">—</b></div>
+      <div>هزینهٔ گچ<b id="kCost">—</b></div>
+    </div>
+    <p class="hint" style="margin-bottom:0">طول کل خودکار از مدل پر می‌شود و قابل تغییر است. مقدار پودر گچ برای هر لیتر، و وزن کیسه را با تجربه یا مشخصات گچ مصرفی خودت وارد کن؛ حجم فقط از هندسهٔ مقطع حساب می‌شود.</p>
+    <div class="row" style="margin-top:8px"><button id="kReset">طول از مدل</button><button id="fitV">⤢ نمای پیش‌فرض سه‌بعدی</button></div>
+  </div>
+  <div class="card">
     <p class="hint" style="margin-top:0">خروجی شابلون در مقیاس ۱:۱ است؛ موقع چاپ مقیاس را روی ۱۰۰٪ (Actual size) بگذار.</p>
     <div class="row" style="margin-bottom:8px"><button id="arBtn" class="pri">📱 AR — دیدن در فضای واقعی</button></div>
     <div class="row" id="xrRow" style="margin-bottom:8px"><button id="xrBtn">🎯 AR دقیق: نقطه‌ها را روی دیوار بزن (اندروید)</button></div>
@@ -464,7 +482,7 @@ function profileCm(){const P=samplePoly();let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
   if(A<0)pts.reverse();cu=cu/(3*A);return{pts,w:(x1-x0)*s,h,area:Math.abs(A)/2,cu}}
 
 /* ---------- step 4: 3D ---------- */
-const view=$('view3d');let renderer,scene,camera,controls,mesh,group,hemi,sun;
+const view=$('view3d');let renderer,scene,camera,controls,mesh,group,hemi,sun,needFit=true;
 const MC={'سفید':[0xf4f0e8,0,.85],'کرم':[0xe6d8bd,0,.85],'طوسی':[0xb4b1ab,0,.8],'طلایی':[0xc9a24a,.85,.32],'مشکی':[0x2a2826,.1,.5]};
 const WC={'سفید':0xf2f0ec,'بژ':0xd9cdb8,'طوسی':0xa9a7a3,'زیتونی':0x8a8a62,'سرمه‌ای':0x3b4a63};
 const LC={'گرم':0xffb060,'آفتابی':0xffe7b8,'سرد':0xc9e0ff};
@@ -505,6 +523,7 @@ function buildPath(){const inv=$('inv').checked,L=Math.max(1,+$('len').value||1)
 const isMid=()=>mode==='A'&&$('apos').value==='mid';
 
 async function update3d(){if(!shape)return;await libs;if(!THREE){$('sDim').textContent='خطا در بارگذاری سه‌بعدی';return}if(!renderer)init3d();resize();
+  const fit=needFit||!mesh;needFit=false;const keep=fit?null:{p:camera.position.clone(),t:controls.target.clone(),n:camera.near,f:camera.far};
   const pr=profileCm(),{path,closed}=buildPath(),F=mode==='F',mid=isMid(),sw=F&&$('inv').checked;
   const prof=sw?pr.pts.map(([u,v])=>[v,u]).reverse():pr.pts,{g,clen,sn,n0f}=sweep(prof,path,closed,sw?pr.h/2:pr.cu);
   if(group){scene.remove(group);group.traverse(o=>o.geometry&&o.geometry.dispose())}group=new THREE.Group();scene.add(group);
@@ -537,21 +556,31 @@ async function update3d(){if(!shape)return;await libs;if(!THREE){$('sDim').textC
     else{controls.target.copy(tg);if(closed&&!$('inv').checked)camera.position.set(tg.x+rd[0]*R*1.55,tg.y-R*.45,tg.z+rd[1]*R*1.55);
       else camera.position.set(tg.x+(rd[0]*.8-rd[1]*.45)*D,tg.y-D*.32,tg.z+(rd[1]*.8+rd[0]*.45)*D)}
     camera.near=Math.max(D,R)/200;camera.far=Math.max(D,R)*40;camera.updateProjectionMatrix()}
+  if(keep){camera.position.copy(keep.p);controls.target.copy(keep.t);camera.near=keep.n;camera.far=keep.f;camera.updateProjectionMatrix()}
   {sun.castShadow=$('cShad').checked;if(!sun.target.parent)scene.add(sun.target);const sp=new THREE.Box3().setFromObject(mesh).getBoundingSphere(new THREE.Sphere()),R=Math.max(5,sp.radius);
     const v=camera.position.clone().sub(controls.target);v.y=0;if(v.lengthSq()<1e-6)v.set(0,0,1);v.normalize();const side=new THREE.Vector3(-v.z,0,v.x);
     sun.target.position.copy(sp.center);sun.position.copy(sp.center).add(v.multiplyScalar(.9).add(new THREE.Vector3(0,.55,0)).add(side.multiplyScalar(.45)).normalize().multiplyScalar(R*3));
     const c=sun.shadow.camera;c.left=c.bottom=-R*1.25;c.right=c.top=R*1.25;c.near=R*.3;c.far=R*7;c.updateProjectionMatrix();sun.shadow.mapSize.set(2048,2048);sun.shadow.bias=-.0004;sun.shadow.normalBias=R*.002;if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null}}
   $('sDim').textContent=`${fa(pr.w)} × ${fa(pr.h)} cm`;$('sArea').textContent=`${fa(pr.area)} cm²`;
-  $('sLen').textContent=`${fa(clen/100,2)} m`;$('sVol').textContent=`${fa(pr.area*clen/1000)} لیتر`}
+  $('sLen').textContent=`${fa(clen/100,2)} m`;$('sVol').textContent=`${fa(pr.area*clen/1000)} لیتر`;kArea=pr.area;if(!kLUser)$('kL').value=(clen/100).toFixed(2);calc()}
 
-function setMode(m){mode=m;['S','C','A','F'].forEach(k=>$('m'+k).classList.toggle('on',k===m));syncUI();update3d()}
+function setMode(m){mode=m;needFit=true;['S','C','A','F'].forEach(k=>$('m'+k).classList.toggle('on',k===m));syncUI();update3d()}
 function syncUI(){const m=mode,mid=isMid();
   $('lLen').hidden=m==='A';$('lRad').hidden=$('lAng').hidden=$('lPos').hidden=m!=='A';$('lFh').hidden=m!=='F';
   $('lInv').hidden=m==='S'||mid;$('xrRow').style.display=(m==='S'||m==='F')?'flex':'none';$('lCeil').hidden=$('lLight').hidden=$('lGap').hidden=m==='F';
   $('lenTxt').textContent=m==='F'?'عرض قاب (سانتی‌متر)':'طول هر شاخه (سانتی‌متر)';
   $('invTxt').textContent={C:'گوشهٔ بیرونی (دور ستون)',A:'ابزار بیرون قوس (دور ستون گرد)',F:'چرخاندن مقطع ۹۰°'}[m]||''}
 $('mS').onclick=()=>setMode('S');$('mC').onclick=()=>setMode('C');$('mA').onclick=()=>setMode('A');$('mF').onclick=()=>setMode('F');
-$('apos').onchange=()=>{syncUI();update3d()};
+$('apos').onchange=()=>{needFit=true;syncUI();update3d()};
+let kArea=0,kLUser=false;
+const LS={get:k=>{try{return localStorage.getItem('osta_'+k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem('osta_'+k,v)}catch(e){}}};
+['kW','kD','kB','kP'].forEach(id=>{const v=LS.get(id);if(v!==null&&v!=='')$(id).value=v;$(id).oninput=()=>{LS.set(id,$(id).value);calc()}});
+$('kL').oninput=()=>{kLUser=true;calc()};$('kReset').onclick=()=>{kLUser=false;update3d()};$('fitV').onclick=()=>{needFit=true;update3d()};
+function calc(){const L=Math.max(0,+$('kL').value||0),w=Math.max(0,+$('kW').value||0)/100,perM=kArea/10,vol=perM*L*(1+w),d=+$('kD').value,bw=+$('kB').value,pr=+$('kP').value;
+  $('kPerM').textContent=`${fa(perM,2)} لیتر`;$('kVol').textContent=`${fa(vol,1)} لیتر`;
+  if(d>0){const kg=vol*d;$('kKgM').textContent=`${fa(perM*d*(1+w),2)} kg`;$('kKg').textContent=`${fa(kg,1)} kg`;
+    if(bw>0){const n=Math.ceil(kg/bw);$('kBags').textContent=`${fa(n,0)} کیسه`;$('kCost').textContent=pr>0?fa(n*pr,0):'—'}else{$('kBags').textContent='وزن کیسه؟';$('kCost').textContent='—'}}
+  else{$('kKgM').textContent=$('kKg').textContent='مقدار پودر؟';$('kBags').textContent=$('kCost').textContent='—'}}
 ['len','rad','ang','inv','cWall','cCeil','cLight','gapC','fh','cEdge','cShad'].forEach(id=>$(id).oninput=update3d);setMode('S');
 
 /* ---------- AR ---------- */
