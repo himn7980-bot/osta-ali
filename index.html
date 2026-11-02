@@ -172,20 +172,31 @@ const enable=n=>{for(let i=2;i<=n;i++)$('st'+i).disabled=false};
 
 /* ---------- load image ---------- */
 function loadCanvas(c){
-  const max=1000,k=Math.min(1,max/Math.max(c.width,c.height));
+  const max=2000,k=Math.min(1,max/Math.max(c.width,c.height));
   SW=Math.round(c.width*k);SH=Math.round(c.height*k);
   srcCanvas=document.createElement('canvas');srcCanvas.width=SW;srcCanvas.height=SH;
   const x=srcCanvas.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,SW,SH);x.drawImage(c,0,0,SW,SH);
   const d=x.getImageData(0,0,SW,SH).data;srcGray=new Uint8Array(SW*SH);
   const g0=new Uint8Array(SW*SH);for(let i=0;i<SW*SH;i++)g0[i]=Math.min(d[i*4],d[i*4+1],d[i*4+2]);
   for(let y=0;y<SH;y++)for(let x=0;x<SW;x++){let m=255;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const xx=x+dx,yy=y+dy;if(xx>=0&&yy>=0&&xx<SW&&yy<SH){const v=g0[yy*SW+xx];if(v<m)m=v}}srcGray[y*SW+x]=m}
-  setFull();enable(2);go(2);
+  autoCrop();enable(2);go(2);
 }
 async function pick(e){const f=e.target.files[0];e.target.value='';if(!f)return;$('lerr').textContent='در حال خواندن عکس…';
   try{const bm=await createImageBitmap(f);$('lerr').textContent='';loadCanvas(bm);return}catch(_){}
   const im=new Image();im.onload=()=>{$('lerr').textContent='';loadCanvas(im);URL.revokeObjectURL(im.src)};
   im.onerror=()=>{$('lerr').textContent='این عکس باز نشد (احتمالاً فرمت HEIC). در تنظیمات دوربین فرمت JPG را انتخاب کن یا اسکرین‌شات بگیر.'};im.src=URL.createObjectURL(f)}
 $('file').onchange=pick;$('cam').onchange=pick;
+function autoCrop(){try{const k=Math.min(1,600/Math.max(SW,SH)),W=Math.round(SW*k),H=Math.round(SH*k),g=new Float64Array(W*H);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++)g[y*W+x]=srcGray[Math.min(SH-1,(y/k)|0)*SW+Math.min(SW-1,(x/k)|0)];
+  const I=new Float64Array((W+1)*(H+1));for(let y=0;y<H;y++){let s=0;for(let x=0;x<W;x++){s+=g[y*W+x];I[(y+1)*(W+1)+x+1]=I[y*(W+1)+x+1]+s}}
+  const R=Math.max(6,Math.round(Math.min(W,H)/20));let ink=new Uint8Array(W*H);
+  for(let y=4;y<H-4;y++){const y0=Math.max(0,y-R),y1=Math.min(H,y+R+1);for(let x=4;x<W-4;x++){const x0=Math.max(0,x-R),x1=Math.min(W,x+R+1);
+    const m=(I[y1*(W+1)+x1]-I[y0*(W+1)+x1]-I[y1*(W+1)+x0]+I[y0*(W+1)+x0])/((y1-y0)*(x1-x0));ink[y*W+x]=g[y*W+x]<m-18?1:0}}
+  ink=morph(ink,W,H,4,true);const lab=new Uint8Array(W*H);let best=null;
+  for(let s0=0;s0<W*H;s0++){if(!ink[s0]||lab[s0])continue;const q=[s0],c=[];lab[s0]=1;while(q.length){const i=q.pop();c.push(i);const x=i%W;for(const j of[x>0?i-1:-1,x<W-1?i+1:-1,i-W,i+W])if(j>=0&&j<W*H&&ink[j]&&!lab[j]){lab[j]=1;q.push(j)}}if(!best||c.length>best.length)best=c}
+  if(!best||best.length<50){setFull();return}let x0=1e9,x1=0,y0=1e9,y1=0;for(const i of best){const x=i%W,y=(i/W)|0;x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}
+  const mg=Math.max(x1-x0,y1-y0)*.08;x0=Math.max(0,(x0-mg)/k);y0=Math.max(0,(y0-mg)/k);x1=Math.min(SW,(x1+mg)/k);y1=Math.min(SH,(y1+mg)/k);
+  corners=[[x0,y0],[x1,y0],[x1,y1],[x0,y1]]}catch(e){setFull()}}
 function setFull(){const m=.015;corners=[[SW*m,SH*m],[SW*(1-m),SH*m],[SW*(1-m),SH*(1-m)],[SW*m,SH*(1-m)]]}
 $('full').onclick=()=>{setFull();drawCrop()};
 
@@ -226,7 +237,7 @@ function solve(A,b){const n=b.length;for(let i=0;i<n;i++){let p=i;for(let r=i+1;
   const x=new Array(n);for(let i=n-1;i>=0;i--){let s=b[i];for(let c=i+1;c<n;c++)s-=A[i][c]*x[c];x[i]=s/A[i][i]}return x}
 
 function warp(){const[tl,tr,br,bl]=corners,d=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
-  let W=Math.max(d(tl,tr),d(bl,br)),H=Math.max(d(tl,bl),d(tr,br));const k=Math.min(1,800/Math.max(W,H));
+  let W=Math.max(d(tl,tr),d(bl,br)),H=Math.max(d(tl,bl),d(tr,br));const k=Math.min(1,1000/Math.max(W,H));
   W=Math.max(20,Math.round(W*k));H=Math.max(20,Math.round(H*k));
   const dst=[[0,0],[W,0],[W,H],[0,H]],A=[],b=[];
   for(let i=0;i<4;i++){const[x,y]=dst[i],[u,v]=corners[i];A.push([x,y,1,0,0,0,-x*u,-y*u]);b.push(u);A.push([0,0,0,x,y,1,-x*v,-y*v]);b.push(v)}
@@ -281,7 +292,7 @@ function detect(){sel=null;['eAdd','eDel','eArc','eLine'].forEach(id=>$(id).disa
     const bg=new Uint8Array(N),st=[];for(let x=0;x<W;x++)st.push(x,(H-1)*W+x);for(let y=0;y<H;y++)st.push(y*W,y*W+W-1);
     while(st.length){const i=st.pop();if(bg[i]||ink[i])continue;bg[i]=1;const x=i%W;if(x>0)st.push(i-1);if(x<W-1)st.push(i+1);if(i>=W)st.push(i-W);if(i<N-W)st.push(i+W)}
     let fill=new Uint8Array(N);for(let i=0;i<N;i++)fill[i]=bg[i]?0:1;
-    if(r>0)fill=morph(fill,W,H,r,false);
+    if(r>0)fill=morph(fill,W,H,r,false);{const o=Math.max(2,Math.round(r*.8)+1);fill=morph(morph(fill,W,H,o,false),W,H,o,true)}
     const lab=new Int32Array(N);let bb=null,bn=0,id=0;
     for(let s=0;s<N;s++){if(!fill[s]||lab[s])continue;id++;const q=[s],cmp=[];lab[s]=id;
       while(q.length){const i=q.pop();cmp.push(i);const x=i%W;for(const j of[x>0?i-1:-1,x<W-1?i+1:-1,i-W,i+W])if(j>=0&&j<N&&fill[j]&&!lab[j]){lab[j]=id;q.push(j)}}
