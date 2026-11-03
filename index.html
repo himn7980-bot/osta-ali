@@ -50,13 +50,24 @@ footer{text-align:center;font-size:11px;color:var(--mut);padding:18px 12px 26px}
 </head>
 <body>
 <div id="splash" style="position:fixed;inset:0;z-index:50;background:radial-gradient(circle at 50% 40%,#2c2925,#151311);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;text-align:center;transition:opacity .6s">
-  <img src="splash.jpg" alt="" style="width:min(58vw,260px);height:min(58vw,260px);border-radius:50%;border:4px solid #b5652b;box-shadow:0 10px 40px rgba(0,0,0,.5)">
-  <div style="font-size:40px;font-weight:800;margin-top:26px">اوستا علی</div>
-  <div style="font-size:14px;opacity:.8;margin-top:6px">از طرح مقطع تا ابزار گچی سه‌بعدی</div>
+  <canvas id="spC" style="position:absolute;inset:0;width:100%;height:100%;background:transparent;border-radius:0;pointer-events:none"></canvas>
+  <img id="spImg" src="splash.jpg" alt="" style="position:relative;width:min(58vw,260px);height:min(58vw,260px);border-radius:50%;border:4px solid #b5652b;box-shadow:0 10px 40px rgba(0,0,0,.5);transform:scale(.4);opacity:0;transition:transform .7s cubic-bezier(.2,1.4,.4,1),opacity .4s">
+  <div style="position:relative;font-size:40px;font-weight:800;margin-top:26px">اوستا علی</div>
+  <div style="position:relative;font-size:14px;opacity:.8;margin-top:6px">از طرح مقطع تا ابزار گچی سه‌بعدی</div>
   <div style="font-size:11px;opacity:.5;margin-top:40px">ArchTverse</div>
 </div>
 <script>(function(){var sp=document.getElementById('splash');function hide(){if(!sp)return;sp.style.opacity=0;setTimeout(function(){sp&&sp.remove();sp=null},600)}
-  sp.onclick=hide;var im=new Image();im.onload=function(){setTimeout(hide,2200)};im.onerror=hide;im.src='splash.jpg';setTimeout(hide,4500)})();</script>
+  sp.onclick=hide;
+  (function(){var cv=document.getElementById('spC'),x=cv.getContext('2d'),d=Math.min(2,devicePixelRatio||1),W=cv.width=innerWidth*d,H=cv.height=innerHeight*d,cx=W/2,cy=H*.42,P=[],S=[],t0=performance.now();
+    for(var i=0;i<170;i++){var a=Math.random()*Math.PI*2,v=(2+Math.random()*13)*d;P.push({x:cx,y:cy,vx:Math.cos(a)*v,vy:Math.sin(a)*v-3*d,r:(1+Math.random()*(i<25?9:4))*d,c:200+Math.random()*55|0,l:1})}
+    function splat(p){var n=3+Math.random()*5|0,b=[];for(var k=0;k<n;k++){var a=Math.random()*6.3,q=p.r*(1+Math.random()*1.8);b.push([p.x+Math.cos(a)*q,p.y+Math.sin(a)*q,p.r*(.25+Math.random()*.5)])}S.push({x:p.x,y:p.y,r:p.r*1.6,b:b,c:p.c})}
+    function f(now){var e=(now-t0)/1000;if(!document.getElementById('spC'))return;x.clearRect(0,0,W,H);
+      var g=x.createRadialGradient(cx,cy,0,cx,cy,Math.min(W,H)*(.2+e*.5));g.addColorStop(0,'rgba(235,230,220,'+Math.max(0,.35-e*.18)+')');g.addColorStop(1,'rgba(235,230,220,0)');x.fillStyle=g;x.fillRect(0,0,W,H);
+      S.forEach(function(s){x.fillStyle='rgba('+s.c+','+(s.c-4)+','+(s.c-14)+','+Math.max(0,.9-e*.2)+')';x.beginPath();x.arc(s.x,s.y,s.r,0,7);x.fill();s.b.forEach(function(q){x.beginPath();x.arc(q[0],q[1],q[2],0,7);x.fill()})});
+      P.forEach(function(p){if(!p.l)return;p.vx*=.96;p.vy=p.vy*.96+.35*d;p.x+=p.vx;p.y+=p.vy;if(Math.hypot(p.vx,p.vy)<1.3*d&&p.r>3*d){p.l=0;splat(p);return}
+        x.fillStyle='rgba('+p.c+','+(p.c-4)+','+(p.c-14)+',.95)';x.beginPath();x.arc(p.x,p.y,p.r,0,7);x.fill()});
+      if(e<3)requestAnimationFrame(f)}
+    requestAnimationFrame(f);setTimeout(function(){var im=document.getElementById('spImg');if(im){im.style.transform='scale(1)';im.style.opacity=1}},180)})();var im=new Image();im.onload=function(){setTimeout(hide,2600)};im.onerror=hide;im.src='splash.jpg';setTimeout(hide,4500)})();</script>
 <header>
   <h1>اوستا علی</h1>
   <p>عکس مقطع ابزار گچی ← اصلاح خطوط ← مدل سه‌بعدی و شابلون ۱:۱</p>
