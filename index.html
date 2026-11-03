@@ -49,12 +49,11 @@ footer{text-align:center;font-size:11px;color:var(--mut);padding:18px 12px 26px}
 </style>
 </head>
 <body>
-<div id="splash" style="position:fixed;inset:0;z-index:50;background:#1f1d1a url(splash.jpg) center 20%/cover no-repeat;display:flex;flex-direction:column;justify-content:flex-end;transition:opacity .6s">
-  <div style="background:linear-gradient(transparent,rgba(20,18,16,.92) 45%);padding:90px 24px 46px;color:#fff;text-align:center">
-    <div style="font-size:42px;font-weight:800;letter-spacing:-.5px">اوستا علی</div>
-    <div style="font-size:14px;opacity:.85;margin-top:6px">از طرح مقطع تا ابزار گچی سه‌بعدی</div>
-    <div style="font-size:11px;opacity:.55;margin-top:18px">ArchTverse</div>
-  </div>
+<div id="splash" style="position:fixed;inset:0;z-index:50;background:radial-gradient(circle at 50% 40%,#2c2925,#151311);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;text-align:center;transition:opacity .6s">
+  <img src="splash.jpg" alt="" style="width:min(58vw,260px);height:min(58vw,260px);border-radius:50%;border:4px solid #b5652b;box-shadow:0 10px 40px rgba(0,0,0,.5)">
+  <div style="font-size:40px;font-weight:800;margin-top:26px">اوستا علی</div>
+  <div style="font-size:14px;opacity:.8;margin-top:6px">از طرح مقطع تا ابزار گچی سه‌بعدی</div>
+  <div style="font-size:11px;opacity:.5;margin-top:40px">ArchTverse</div>
 </div>
 <script>(function(){var sp=document.getElementById('splash');function hide(){if(!sp)return;sp.style.opacity=0;setTimeout(function(){sp&&sp.remove();sp=null},600)}
   sp.onclick=hide;var im=new Image();im.onload=function(){setTimeout(hide,2200)};im.onerror=hide;im.src='splash.jpg';setTimeout(hide,4500)})();</script>
