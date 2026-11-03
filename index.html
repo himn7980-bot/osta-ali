@@ -49,6 +49,15 @@ footer{text-align:center;font-size:11px;color:var(--mut);padding:18px 12px 26px}
 </style>
 </head>
 <body>
+<div id="splash" style="position:fixed;inset:0;z-index:50;background:#1f1d1a url(splash.jpg) center 20%/cover no-repeat;display:flex;flex-direction:column;justify-content:flex-end;transition:opacity .6s">
+  <div style="background:linear-gradient(transparent,rgba(20,18,16,.92) 45%);padding:90px 24px 46px;color:#fff;text-align:center">
+    <div style="font-size:42px;font-weight:800;letter-spacing:-.5px">اوستا علی</div>
+    <div style="font-size:14px;opacity:.85;margin-top:6px">از طرح مقطع تا ابزار گچی سه‌بعدی</div>
+    <div style="font-size:11px;opacity:.55;margin-top:18px">ArchTverse</div>
+  </div>
+</div>
+<script>(function(){var sp=document.getElementById('splash');function hide(){if(!sp)return;sp.style.opacity=0;setTimeout(function(){sp&&sp.remove();sp=null},600)}
+  sp.onclick=hide;var im=new Image();im.onload=function(){setTimeout(hide,2200)};im.onerror=hide;im.src='splash.jpg';setTimeout(hide,4500)})();</script>
 <header>
   <h1>اوستا علی</h1>
   <p>عکس مقطع ابزار گچی ← اصلاح خطوط ← مدل سه‌بعدی و شابلون ۱:۱</p>
