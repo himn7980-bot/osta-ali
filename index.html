@@ -235,7 +235,7 @@ let THREE=null,OrbitControls=null;
 const libs=Promise.all([import('three'),import('./OrbitControls.js')]).then(([a,b])=>{THREE=a;OrbitControls=b.OrbitControls}).catch(e=>{console.error(e)});
 const $=id=>document.getElementById(id);
 
-let srcCanvas=null,srcGray=null,SW=0,SH=0,corners=null;
+let inkMax=255,srcCanvas=null,srcGray=null,SW=0,SH=0,corners=null;
 let autoOri=false,warped=null,WW=0,WH=0,bgCanvas=null,shape=null,mode='S';
 
 /* ---------- navigation ---------- */
@@ -252,6 +252,8 @@ function loadCanvas(c){blank=false;$('hcm').readOnly=false;$('draftRow').style.d
   const x=srcCanvas.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,SW,SH);x.drawImage(c,0,0,SW,SH);
   const d=x.getImageData(0,0,SW,SH).data;srcGray=new Uint8Array(SW*SH);
   const g0=new Uint8Array(SW*SH);for(let i=0;i<SW*SH;i++)g0[i]=Math.min(d[i*4],d[i*4+1],d[i*4+2]);
+  {const h=new Uint32Array(256);for(let i=0;i<SW*SH;i+=7)h[g0[i]]++;let c=0,n=Math.ceil(SW*SH/7)/2,med=0;for(;med<256;med++){c+=h[med];if(c>=n)break}
+   if(med<110){for(let i=0;i<SW*SH;i++)g0[i]=255-Math.max(d[i*4],d[i*4+1],d[i*4+2]);med=255-med}const h2=new Uint32Array(256);for(let i=0;i<SW*SH;i+=5)h2[g0[i]]++;let p2=0,c2=0;const n2=Math.ceil(SW*SH/5)*.004;for(;p2<255;p2++){c2+=h2[p2];if(c2>=n2)break}inkMax=Math.max(p2+10,p2+(med-p2)*.6)}
   for(let y=0;y<SH;y++)for(let x=0;x<SW;x++){let m=255;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const xx=x+dx,yy=y+dy;if(xx>=0&&yy>=0&&xx<SW&&yy<SH){const v=g0[yy*SW+xx];if(v<m)m=v}}srcGray[y*SW+x]=m}
   autoCrop();if(rectMode)toRect();enable(2);go(2);
 }
@@ -265,7 +267,7 @@ function autoCrop(){try{const k=Math.min(1,600/Math.max(SW,SH)),W=Math.round(SW*
   const I=new Float64Array((W+1)*(H+1));for(let y=0;y<H;y++){let s=0;for(let x=0;x<W;x++){s+=g[y*W+x];I[(y+1)*(W+1)+x+1]=I[y*(W+1)+x+1]+s}}
   const R=Math.max(6,Math.round(Math.min(W,H)/20));let ink=new Uint8Array(W*H);
   for(let y=4;y<H-4;y++){const y0=Math.max(0,y-R),y1=Math.min(H,y+R+1);for(let x=4;x<W-4;x++){const x0=Math.max(0,x-R),x1=Math.min(W,x+R+1);
-    const m=(I[y1*(W+1)+x1]-I[y0*(W+1)+x1]-I[y1*(W+1)+x0]+I[y0*(W+1)+x0])/((y1-y0)*(x1-x0));ink[y*W+x]=g[y*W+x]<m-18?1:0}}
+    const m=(I[y1*(W+1)+x1]-I[y0*(W+1)+x1]-I[y1*(W+1)+x0]+I[y0*(W+1)+x0])/((y1-y0)*(x1-x0));ink[y*W+x]=g[y*W+x]<m-18&&g[y*W+x]<inkMax?1:0}}
   ink=morph(ink,W,H,4,true);const lab=new Uint8Array(W*H);let best=null;
   for(let s0=0;s0<W*H;s0++){if(!ink[s0]||lab[s0])continue;const q=[s0],c=[];lab[s0]=1;while(q.length){const i=q.pop();c.push(i);const x=i%W;for(const j of[x>0?i-1:-1,x<W-1?i+1:-1,i-W,i+W])if(j>=0&&j<W*H&&ink[j]&&!lab[j]){lab[j]=1;q.push(j)}}if(!best||c.length>best.length)best=c}
   if(!best||best.length<50){setFull();return}let x0=1e9,x1=0,y0=1e9,y1=0;for(const i of best){const x=i%W,y=(i/W)|0;x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}
@@ -367,7 +369,7 @@ function detect(){sel=null;vz=1;vox=voy=0;['eAdd','eDel','eArc','eLine'].forEach
   for(let y=0;y<H;y++){let s=0;for(let x=0;x<W;x++){s+=g[y*W+x];I[(y+1)*(W+1)+x+1]=I[y*(W+1)+x+1]+s}}
   const R=Math.max(8,Math.round(Math.min(W,H)/25)),C=+$('sens').value;let ink=new Uint8Array(N);
   for(let y=0;y<H;y++){const y0=Math.max(0,y-R),y1=Math.min(H,y+R+1);for(let x=0;x<W;x++){const x0=Math.max(0,x-R),x1=Math.min(W,x+R+1);
-    const m=(I[y1*(W+1)+x1]-I[y0*(W+1)+x1]-I[y1*(W+1)+x0]+I[y0*(W+1)+x0])/((y1-y0)*(x1-x0));ink[y*W+x]=g[y*W+x]<m-C?1:0}}
+    const m=(I[y1*(W+1)+x1]-I[y0*(W+1)+x1]-I[y1*(W+1)+x0]+I[y0*(W+1)+x0])/((y1-y0)*(x1-x0));ink[y*W+x]=g[y*W+x]<m-C&&g[y*W+x]<inkMax?1:0}}
   const bd=4;for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(x<bd||y<bd||x>=W-bd||y>=H-bd)ink[y*W+x]=0;
   const ink0=ink;let best=null,bestN=0,closed=false,r0=+$('gap').value,rUsed=r0;
   for(let r=r0;r<=r0+16;r+=2){ink=r>0?morph(ink0,W,H,r,true):ink0;
@@ -767,7 +769,7 @@ function makePdf(){const pr=profileCm(),P=pr.pts.map(([u,v])=>[u*10,v*10]),W=pr.
   return{pdf:out,pn}}
 $('xPdf').onclick=()=>{if(!shape)return;const{pdf,pn}=makePdf();dl('osta-ali-template-1to1.pdf',pdf,'application/pdf');
   $('pdfTxt').textContent=`کاغذ ${pn==='custom'?'سفارشی':pn} — موقع چاپ «Actual size / ۱۰۰٪» را بزن و خط‌کش ۱۰ سانتی پایین برگه را با خط‌کش واقعی چک کن.`};
-window.__pdf=makePdf;window.__ed=()=>({V:shape.V,vz,vox,voy,WW,WH,sel,s:scl(cv3)});
+window.__pdf=makePdf;window.__dbg=()=>({inkMax,corners,SW,SH});window.__ed=()=>({V:shape.V,vz,vox,voy,WW,WH,sel,s:scl(cv3)});
 
 /* ---------- local gallery ---------- */
 const GT=['گلویی','قرنیز سقفی','قرنیز کف','قاب','کمربندی / ابزار دیواری','چهارچوب در و پنجره','فیتیله / نور مخفی','نوار سقفی','سایر'];
